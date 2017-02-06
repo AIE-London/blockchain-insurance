@@ -1,0 +1,10 @@
+TestCase,URL,contactId,Method,StatusCode,RequestJSON,ExpectedJSON,Comments
+1,contact,JMETER_TEST_CONTACT,POST,200,"{""contactId"": ""JMETER_TEST_CONTACT"",""name"" : ""Jmeter Test"",""email"": ""someemail@mail.com"",""sms"": ""1234""}","{""contactId"": ""JMETER_TEST_CONTACT""}",
+2,contact/JMETER_TEST_CONTACT,JMETER_TEST_CONTACT,PUT,200,"{""name"" : ""Jmeter Test"",""email"": ""changedmail@mail.com"",""sms"": ""1234""}","{""contactId"": ""JMETER_TEST_CONTACT""}",
+3,contact/JMETER_TEST_CONTACT,JMETER_TEST_CONTACT,GET,200,,"{""name"" : ""Jmeter Test"",""email"": ""changedmail@mail.com"",""sms"": ""1234""}",
+4,contact/JMETER_TEST_CONTACT/cases,JMETER_TEST_CONTACT,PUT,200,"{""caseId"": ""100"",""operation"": ""add""}","{""caseId"": ""100""}",
+5,contact/JMETER_TEST_CONTACT/cases,JMETER_TEST_CONTACT,PUT,200,"{""caseId"": ""101"",""operation"": ""add""}","{""caseId"": ""101""}",
+6,contact/JMETER_TEST_CONTACT/cases,JMETER_TEST_CONTACT,GET,200,,"{""cases"": [""100"", ""101""]}",
+7,contact/JMETER_TEST_CONTACT/cases,JMETER_TEST_CONTACT,PUT,200,"{""caseId"": ""100"",""operation"": ""delete""}","{""caseId"": ""100""}",
+8,contact/JMETER_TEST_CONTACT/cases,JMETER_TEST_CONTACT,GET,200,,"{""cases"": [""101""]}",
+5,contact/JMETER_TEST_CONTACT,JMETER_TEST_CONTACT,DELETE,200,,"{""deleted"": ""True""}",

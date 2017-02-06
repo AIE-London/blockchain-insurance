@@ -1,0 +1,86 @@
+/**
+ * Created by dcotton on 04/11/2016.
+ */
+var authEndpoint = "http://aston-jwt-auth.eu-gb.mybluemix.net/app/";
+
+var request = require('request');
+
+var config =  require('config');
+
+module.exports = {
+  signJWT: function (data, options, callback) {
+    var requestData = {};
+    requestData.token = data;
+    requestData.secret = options.secret;
+    console.log(authEndpoint+options.name+"/token/sign");
+    console.log(requestData);
+    request({
+      url: authEndpoint+options.name+"/token/sign",
+      method: "POST",
+      json: requestData
+    }, function (error, response, body) {
+      if(response.statusCode == 200){
+        console.log(body);
+        callback(body.token);
+      }
+      else{
+        callback(false);
+      }
+    });
+  },
+  verifyJWT: function (data, options, callback) {
+    var requestData = {};
+    requestData.token = data;
+    requestData.secret = options.secret;
+    request({
+      url: authEndpoint+options.name+"/token/verify",
+      method: "POST",
+      json: requestData
+    }, function (error, response, body) {
+      if(response.statusCode == 200){
+        callback(true);
+      }
+      else{
+        callback(false);
+      }
+    });
+  },
+  middleware: function (req, response, next) {
+    var header = "";
+    var origin = req.headers.origin;
+    if((origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')){
+      next();
+    }
+    else{
+      if(req.get("Authorization") && req.get("Authorization").split(" ").length > 1 && req.get("Authorization").split(" ")[1]){
+        header = req.get("Authorization").split(" ")[1];
+      }
+      console.log("HEADER: " + header);
+      //verify JWT with Auth header in syntax "Bearer 12321k3123jlkj"
+      module.exports.verifyJWT(header, config.web.auth , function(ok){
+        if(ok){
+          next();
+        }
+        else{
+          console.error("Invalid JWT");
+          response.setHeader('Content-Type', 'application/json');
+          response.statusCode = 401;
+          response.write(JSON.stringify({reason: "Unauthorized"}));
+          response.end();
+          return;
+        }
+      });
+    }
+  },
+  allowOriginsMiddleware: function(req, res, next) {
+    var allowedOrigins = config.allowedOrigins;
+    var origin = req.headers.origin;
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+
+    if(allowedOrigins.indexOf(origin) > -1){
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    return next();
+  }
+};

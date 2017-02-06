@@ -1,0 +1,91 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"title": "AIE JSON",
+	"description": "AIE JSON",
+	"oneOf": 
+	[
+		{
+			"type": "object",
+			"properties": 
+			{
+				"operation": 
+				{
+					"type": "string",
+					"enum": 
+					[
+						"add",
+						"delete"
+					]
+				},
+				"item": 
+				{
+					"oneOf": 
+					[
+						{
+							"type": "string",
+							"minLength": 1
+						},
+						{
+							"type": "object"
+						},
+						{
+							"type": "number"
+						},
+						{
+							"type": "boolean"
+						}
+					]
+				}
+			},
+			"required": 
+			[
+				"operation",
+				"item"
+			],
+			"additionalProperties": false
+		},
+		{
+			"type": "object",
+			"properties": 
+			{
+				"operation": 
+				{
+					"type": "string",
+					"enum": 
+					[
+						"add",
+						"delete"
+					]
+				},
+				"items": 
+				{
+					"type": "array",
+					"minItems": 1,
+					"items": {
+						"oneOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "object"
+							},
+							{
+								"type": "number"
+							},
+							{
+								"type": "boolean"
+							}
+						]
+					}
+				}
+			},
+			"required": 
+			[
+				"operation",
+				"items"
+			],
+			"additionalProperties": false
+		}
+	]
+}
