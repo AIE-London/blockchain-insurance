@@ -366,19 +366,19 @@ func (t *InsuranceChaincode) retrieveAllClaimsJSON(stub shim.ChaincodeStubInterf
 //					JSON into the Claim struct for use in the contract. Returns the Claim struct.
 //					Returns empty claim if it errors.
 //==============================================================================================================================
-func (t *InsuranceChaincode) retrieveClaim(stub shim.ChaincodeStubInterface, claimId string) (Policy, error) {
+func (t *InsuranceChaincode) retrieveClaim(stub shim.ChaincodeStubInterface, claimId string) (Claim, error) {
 
-	var policy Policy
+	var claim Claim
 
 	bytes, err := t.retrieveClaimJSON(stub, claimId)
 
-	if err != nil {	fmt.Printf("retrieveClaim: Cannot read claim: %s", err); return policy, errors.New("retrieveClaim: Cannot read claim")}
+	if err != nil {	fmt.Printf("retrieveClaim: Cannot read claim: %s", err); return claim, errors.New("retrieveClaim: Cannot read claim")}
 
-	err = json.Unmarshal(bytes, &policy);
+	err = json.Unmarshal(bytes, &claim);
 
-	if err != nil {	fmt.Printf("retrieveClaim: Corrupt claim record "+string(bytes)+": %s", err); return policy, errors.New("retrieveClaim: Corrupt claim record"+string(bytes))}
+	if err != nil {	fmt.Printf("retrieveClaim: Corrupt claim record "+string(bytes)+": %s", err); return claim, errors.New("retrieveClaim: Corrupt claim record"+string(bytes))}
 
-	return policy, nil
+	return claim, nil
 }
 
 //==============================================================================================================================
