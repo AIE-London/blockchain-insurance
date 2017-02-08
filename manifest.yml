@@ -6,5 +6,5 @@ applications:
   name: blockchain-insurance
   host: blockchain-insurance
   disk_quota: 256M
-  #services:
-   #- myblockchain
+  services:
+   - ADC_AIE_Blockchain
