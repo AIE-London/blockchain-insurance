@@ -3,6 +3,8 @@ applications:
   memory: 128M
   instances: 1
   domain: eu-gb.mybluemix.net
-  name: blockchain-insurance-node-components
-  host: blockchain-insurance-node-components
+  name: blockchain-insurance
+  host: blockchain-insurance
   disk_quota: 256M
+  services:
+   - ADC_AIE_Blockchain
