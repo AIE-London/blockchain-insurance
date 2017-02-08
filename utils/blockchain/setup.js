@@ -40,14 +40,14 @@ var check_if_deployed = function(e, attempt){
   }
   else{
     console.log('[preflight check]', attempt, ': testing if chaincode is ready');
-    chaincode.query.read(['_marbleindex'], function(err, resp){
+    chaincode.query.read(['_authorisedGarages'], function(err, resp){
       var cc_deployed = false;
       try{
         if(err == null){															//no errors is good, but can't trust that alone
-          if(resp === 'null') cc_deployed = true;									//looks alright, brand new, no marbles yet
+          if(resp === 'null') cc_deployed = false; // If the chaincode is deployed and Init ran, this node should not be null
           else{
             var json = JSON.parse(resp);
-            if(json.constructor === Array) cc_deployed = true;					//looks alright, we have marbles
+            if(json.length > 0) cc_deployed = true; // We should have at least one authorised garage
           }
         }
       }
@@ -161,7 +161,7 @@ var loadSDK = function(){
   };
 
   if (options.chaincode) {
-    ibc.load(options, sdkLoaded());
+    ibc.load(options, sdkLoaded);
   } else {
     console.error("Didn't try load SDK because there is no valid chaincode");
   }

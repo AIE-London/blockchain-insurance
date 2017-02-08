@@ -1,15 +1,15 @@
 var config =  require('config');
 
 // Integration
-var cloudantIntegration = require('./custom_modules/integration/module_CloudantIntegration');
-var auth = require('./custom_modules/integration/module_AuthService');
+var cloudantIntegration = require('./utils/integration/cloudantIntegration');
+var auth = require('./utils/integration/authService');
 
 // Helper Functions
-var arrayHelperFunctions = require('./custom_modules/helpers/module_ArrayHelperFunctions');
-var objectHelperFunctions = require('./custom_modules/helpers/module_ObjectHelperFunctions');
-var routingHelperFunctions = require('./custom_modules/helpers/module_RoutingHelperFunctions');
+var arrayHelperFunctions = require('./utils/helpers/array');
+var objectHelperFunctions = require('./utils/helpers/object');
+var routingHelperFunctions = require('./utils/helpers/routing');
 
-var blockchainSetup = require('./custom_modules/blockchain/module_BlockchainSetup');
+var blockchainSetup = require('./utils/blockchain/setup');
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
