@@ -27,6 +27,48 @@ var detect_tls_or_not = function(peer_array){
   return tls;
 };
 
+//loop here, check if chaincode is up and running or not
+var check_if_deployed = function(e, attempt){
+  if(e){
+    cb_deployed(e);																		//looks like an error pass it along
+  }
+  else if(attempt >= 15){																	//tried many times, lets give up and pass an err msg
+    console.log('[preflight check]', attempt, ': failed too many times, giving up');
+    var msg = 'chaincode is taking an unusually long time to start. this sounds like a network error, check peer logs';
+    if(!process.error) process.error = {type: 'deploy', msg: msg};
+    cb_deployed(msg);
+  }
+  else{
+    console.log('[preflight check]', attempt, ': testing if chaincode is ready');
+    chaincode.query.read(['_marbleindex'], function(err, resp){
+      var cc_deployed = false;
+      try{
+        if(err == null){															//no errors is good, but can't trust that alone
+          if(resp === 'null') cc_deployed = true;									//looks alright, brand new, no marbles yet
+          else{
+            var json = JSON.parse(resp);
+            if(json.constructor === Array) cc_deployed = true;					//looks alright, we have marbles
+          }
+        }
+      }
+      catch(e){}																		//anything nasty goes here
+
+      // ---- Are We Ready? ---- //
+      if(!cc_deployed){
+        console.log('[preflight check]', attempt, ': failed, trying again');
+        setTimeout(function(){
+          check_if_deployed(null, ++attempt);										//no, try again later
+        }, 10000);
+      }
+      else{
+        console.log('[preflight check]', attempt, ': success');
+        cb_deployed(null);															//yes, lets go!
+      }
+    });
+  }
+}
+
+
 //Chaincode
 var chaincode = {
   zip_url: "https://github.com/Capgemini-AIE/blockchain-insurance/archive/" + fullVersion + ".zip",
