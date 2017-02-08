@@ -100,7 +100,29 @@ var loadCredentials = function(){
       }
     }
   } else {
-    var manual = require('../../config/credentials/ibm_blockchain_credentials.json');
+
+    var manual = {};
+
+    var cloudCredentials = false;
+
+    try{
+      require.resolve('../../config/credentials/ibm_blockchain_credentials.json');
+      console.log("Using IBM Blockchain Credentials")
+      cloudCredentials = true;
+    } catch (e){
+      console.log("Using Docker Credentials");
+      cloudCredentials = false;
+    }
+
+    if (cloudCredentials){
+      console.log("-----ibm-----");
+      manual = require('../../config/credentials/ibm_blockchain_credentials.json');
+    } else {
+      console.log("-----docker-----");
+      manual = require('../../config/credentials/mycreds_docker_compose.json');
+    }
+
+
 
     if (manual) {
       if (manual.credentials.peers) {
