@@ -40,6 +40,11 @@
         "base": "component",
         "itemName": "items"
       }
+    },
+    "version": {
+      "major": 0,
+      "minor": 2,
+      "bug": 0
     }
   },
   "web": {

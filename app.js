@@ -9,6 +9,8 @@ var arrayHelperFunctions = require('./custom_modules/helpers/module_ArrayHelperF
 var objectHelperFunctions = require('./custom_modules/helpers/module_ObjectHelperFunctions');
 var routingHelperFunctions = require('./custom_modules/helpers/module_RoutingHelperFunctions');
 
+var blockchainSetup = require('./custom_modules/blockchain/module_BlockchainSetup');
+
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
 
@@ -151,8 +153,9 @@ app.post('/auth/', function(request, response){
 app.get('/' + apiPath.base + '/test', function(request, response){
 	var responseBody = {};
 
-	responseBody.message = "Endpoint hit successfully";
+  blockchainSetup.setup();
 
+	responseBody.message = "Endpoint hit successfully";
 	response.setHeader('Content-Type', 'application/json');
 	response.write(JSON.stringify(responseBody));
 	response.end();

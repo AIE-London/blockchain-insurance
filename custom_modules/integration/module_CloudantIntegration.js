@@ -18,7 +18,7 @@ function initDBConnection() {
     cloudant.db.create(dbCredentials.name, function (err, res) {
         if (err) {
             console.log(config.database.cloudant.messages.dbExists);
-            console.log(err);
+            //console.log(err);
         }else{
             console.log(config.database.cloudant.messages.dbCreated);
         }
