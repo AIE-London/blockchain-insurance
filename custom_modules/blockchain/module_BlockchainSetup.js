@@ -92,8 +92,6 @@ var setOptions = function(){
 };
 
 var sdkLoaded = function(err, cc){
-  console.log("--error--");
-  console.log(err);
 
   if (err || !cc) {
     console.log("There was an error loading the chaincode / network");
@@ -101,9 +99,6 @@ var sdkLoaded = function(err, cc){
   } else {
     console.log("There was no error loading the chaincode / network");
     chaincode = cc;
-
-    console.log("---- CC ----");
-    console.log(cc);
 
     // ---- To Deploy or Not to Deploy ---- //
     if(!cc.details.deployed_name || cc.details.deployed_name === ''){
@@ -122,14 +117,6 @@ var loadSDK = function(){
     console.log('\n[!] looks like you are in bluemix, I am going to clear out the deploy_name so that it deploys new cc.\n[!] hope that is ok budddy\n');
     options.chaincode.deployed_name = '';
   };
-
-  console.log(users);
-  console.log(peers);
-
-
-  console.log(options.peers);
-  console.log(options.users);
-  console.log(options.chaincode)
 
   if (options.chaincode) {
     ibc.load(options, sdkLoaded());
