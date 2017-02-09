@@ -22,6 +22,8 @@ docker-compose -f four-peer-ca.yaml up -d
 
 To test it is up and running properly hit [http://localhost:7050/chain](http://localhost:7050/chain)
 
+### Deploying chaincode for development (Only currently working in the 4 peer environmen)
+
 To run chaincode locally without having to deploy from a github url:
 
 1) Build your chaincode
