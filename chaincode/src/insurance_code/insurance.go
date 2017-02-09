@@ -49,6 +49,7 @@ type PolicyRelations struct {
 	user		string			`json:"user"`
 	vehicle		string			`json:"vehicle"`
 	claims		[]string		`json:"claims"`
+
 }
 
 //==============================================================================================================================
@@ -68,7 +69,7 @@ type ClaimDetails struct {
 	Status		string			`json:"status"`
 	Description	string			`json:"description"`
 	Incident	ClaimDetailsIncident	`json:"incident"`
-	Repair		ClaimDetailsClaimRepair	`json:"repair"`
+	Repair		ClaimDetailsClaimGarageReport	`json:"repair"`
 	Settlement	ClaimDetailsSettlement	`json:"settlement"`
 }
 
@@ -81,12 +82,14 @@ type ClaimDetailsIncident struct {
 }
 
 //==============================================================================================================================
-//	ClaimDetailsClaimRepair - Defines the structure for a ClaimDetailsClaimRepair object.
+//	ClaimDetailsClaimGarageReport - Defines the structure for a ClaimDetailsClaimGarageReport object.
 //==============================================================================================================================
-type ClaimDetailsClaimRepair struct {
+type ClaimDetailsClaimGarageReport struct {
 	Garage		string	`json:"garage"`
-	Estimate	string	`json:"estimate"`
-	Actual		string	`json:"actual"`
+	Estimate	int	`json:"estimate"`
+	Actual		int	`json:"actual"`
+	WriteOff	bool	`json:"writeOff"`
+	Notes		string	`json:"notes"`
 }
 
 //==============================================================================================================================
@@ -103,8 +106,8 @@ type ClaimDetailsSettlement struct {
 //	ClaimDetailsSettlementTotalLoss - Defines the structure for a ClaimDetailsSettlementTotalLoss object.
 //==============================================================================================================================
 type ClaimDetailsSettlementTotalLoss struct {
-	CarValueEstimate	string	`json:"carValueEstimate"`
-	CustomerAgreedValue	string	`json:"customerAgreedValue"`
+	CarValueEstimate	int	`json:"carValueEstimate"`
+	CustomerAgreedValue	int	`json:"customerAgreedValue"`
 }
 
 //==============================================================================================================================
@@ -113,7 +116,7 @@ type ClaimDetailsSettlementTotalLoss struct {
 type ClaimDetailsSettlementPayment struct {
 	RecipientType	string	`json:"recipientType"`
 	Recipient	string	`json:"recipient"`
-	Amount		string	`json:"amount"`
+	Amount		int	`json:"amount"`
 	Status		string	`json:"status"`
 }
 
@@ -122,15 +125,6 @@ type ClaimDetailsSettlementPayment struct {
 //==============================================================================================================================
 type ClaimRelations struct {
 	RelatedPolicy	string	`json:"relatedPolicy"`
-}
-
-//==============================================================================================================================
-//	GarageReport - Defines the structure for a GarageReport object.
-//==============================================================================================================================
-type GarageReport struct {
-	Description         string          `json:"description"`
-	EstimatedDamageCost int             `json:"estimated_damage_cost"`
-	WriteOff            bool            `json:"write_off"`
 }
 
 //==============================================================================================================================
