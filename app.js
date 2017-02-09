@@ -2,7 +2,9 @@ var config =  require('config');
 
 // Integration
 var cloudantIntegration = require('./utils/integration/cloudantIntegration');
+
 var userService = require('./utils/integration/userService');
+
 var auth = require('./utils/integration/authService');
 
 // Helper Functions
