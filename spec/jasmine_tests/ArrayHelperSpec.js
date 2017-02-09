@@ -1,5 +1,5 @@
 describe("ArrayHelper", function() {
-  arrayHelper = require('../../custom_modules/helpers/module_ArrayHelperFunctions');
+  arrayHelper = require('../../utils/helpers/array');
 
   beforeEach(function () {
 

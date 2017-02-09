@@ -1,4 +1,4 @@
-var objectHelper = require('../../custom_modules/helpers/module_ObjectHelperFunctions');
+var objectHelper =  require('../../utils/helpers/object');
 
 // Load the core build.
 var _ = require('lodash/core');

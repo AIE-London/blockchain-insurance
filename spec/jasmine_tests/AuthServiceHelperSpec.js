@@ -1,5 +1,6 @@
 describe("AuthServiceHelper", function() {
-  authHelper = require('../../custom_modules/integration/module_AuthService');
+  authHelper = require('../../utils/integration/authService');
+
 
   beforeEach(function () {
 
