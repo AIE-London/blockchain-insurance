@@ -34,7 +34,7 @@ type Policy struct {
 }
 
 //==============================================================================================================================
-//	PolicyDetails - Defines the structure for the policy details object.
+//	PolicyDetails - Defines the structure for the PolicyDetails object.
 //==============================================================================================================================
 type PolicyDetails struct {
 	startDate	string			`json:"startDate"`
@@ -43,7 +43,7 @@ type PolicyDetails struct {
 }
 
 //==============================================================================================================================
-//	PolicyRelations - Defines the structure for a Policy object.
+//	PolicyRelations - Defines the structure for a PolicyRelations object.
 //==============================================================================================================================
 type PolicyRelations struct {
 	user		string			`json:"user"`
@@ -53,7 +53,7 @@ type PolicyRelations struct {
 }
 
 //==============================================================================================================================
-//	Claim - Defines the structure for a claim object.
+//	Claim - Defines the structure for a Claim object.
 //==============================================================================================================================
 type Claim struct {
 	Id		string		`json:"id"`
@@ -66,11 +66,11 @@ type Claim struct {
 //	ClaimDetails - Defines the structure for a ClaimDetails object.
 //==============================================================================================================================
 type ClaimDetails struct {
-	Status		string			`json:"status"`
-	Description	string			`json:"description"`
-	Incident	ClaimDetailsIncident	`json:"incident"`
+	Status		string				`json:"status"`
+	Description	string				`json:"description"`
+	Incident	ClaimDetailsIncident		`json:"incident"`
 	Repair		ClaimDetailsClaimGarageReport	`json:"repair"`
-	Settlement	ClaimDetailsSettlement	`json:"settlement"`
+	Settlement	ClaimDetailsSettlement		`json:"settlement"`
 }
 
 //==============================================================================================================================
@@ -124,6 +124,52 @@ type ClaimDetailsSettlementPayment struct {
 //	ClaimRelations - Defines the structure for a ClaimRelations object.
 //==============================================================================================================================
 type ClaimRelations struct {
+	RelatedPolicy	string	`json:"relatedPolicy"`
+}
+
+//==============================================================================================================================
+//	Vehicle - Defines the structure for a Vehicle object.
+//==============================================================================================================================
+type Vehicle struct {
+	Id		string			`json:"id"`
+	Type		string			`json:"type"`
+	Details		VehicleDetails		`json:"details"`
+}
+
+//==============================================================================================================================
+//	VehicleDetails - Defines the structure for a VehicleDetails object.
+//==============================================================================================================================
+type VehicleDetails struct {
+	Make		string		`json:"make"`
+	Model		string		`json:"model"`
+	Registration	string		`json:"registration"`
+	Year		string		`json:"year"`
+	Mileage		string		`json:"mileage"`
+}
+
+//==============================================================================================================================
+//	User - Defines the structure for a User object.
+//==============================================================================================================================
+type User struct {
+	Id		string		`json:"id"`
+	Type		string		`json:"type"`
+	Details		UserDetails	`json:"details"`
+	Relations	UserRelations	`json:"relations"`
+}
+
+//==============================================================================================================================
+//	UserDetails - Defines the structure for a UserDetails object.
+//==============================================================================================================================
+type UserDetails struct {
+	Forename	string		`json:"forename"`
+	Surname		string		`json:"surname"`
+	Email		string		`json:"email"`
+}
+
+//==============================================================================================================================
+//	UserRelations - Defines the structure for a UserRelations object.
+//==============================================================================================================================
+type UserRelations struct {
 	RelatedPolicy	string	`json:"relatedPolicy"`
 }
 
