@@ -20,6 +20,7 @@ services:
       - MEMBERSRVC_CA_LOGGING_TCAP=INFO
       - MEMBERSRVC_CA_LOGGING_TCAA=INFO
       - MEMBERSRVC_CA_LOGGING_TLSCA=INFO
+      - MEMBERSRVC_CA_ACA_ENABLED=true
 
   vp0:
     image: hyperledger/fabric-peer:x86_64-0.6.0-preview
@@ -42,10 +43,11 @@ services:
       - CORE_PEER_PKI_TCA_PADDR=membersrvc:7054
       - CORE_PEER_PKI_TLSCA_PADDR=membersrvc:7054
       - CORE_SECURITY_ENABLED=true
+      - CORE_SECURITY_ATTRIBUTES_ENABLED=true
       - CORE_PEER_VALIDATOR_CONSENSUS_PLUGIN=pbft
       - CORE_PBFT_GENERAL_MODE=batch
       - CORE_PBFT_GENERAL_N=4
-    command: sh -c "sleep 10; peer node start"
+    command: sh -c "sleep 10; peer node start --peer-chaincodedev"
     links:
       - membersrvc
 
@@ -71,10 +73,11 @@ services:
       - CORE_PEER_PKI_TCA_PADDR=membersrvc:7054
       - CORE_PEER_PKI_TLSCA_PADDR=membersrvc:7054
       - CORE_SECURITY_ENABLED=true
+      - CORE_SECURITY_ATTRIBUTES_ENABLED=true
       - CORE_PEER_VALIDATOR_CONSENSUS_PLUGIN=pbft
       - CORE_PBFT_GENERAL_MODE=batch
       - CORE_PBFT_GENERAL_N=4
-    command: sh -c "sleep 10; peer node start"
+    command: sh -c "sleep 10; peer node start --peer-chaincodedev"
     links:
       - membersrvc
       - vp0
@@ -101,10 +104,11 @@ services:
       - CORE_PEER_PKI_TCA_PADDR=membersrvc:7054
       - CORE_PEER_PKI_TLSCA_PADDR=membersrvc:7054
       - CORE_SECURITY_ENABLED=true
+      - CORE_SECURITY_ATTRIBUTES_ENABLED=true
       - CORE_PEER_VALIDATOR_CONSENSUS_PLUGIN=pbft
       - CORE_PBFT_GENERAL_MODE=batch
       - CORE_PBFT_GENERAL_N=4
-    command: sh -c "sleep 10; peer node start"
+    command: sh -c "sleep 10; peer node start --peer-chaincodedev"
     links:
       - membersrvc
       - vp0
@@ -131,10 +135,11 @@ services:
       - CORE_PEER_PKI_TCA_PADDR=membersrvc:7054
       - CORE_PEER_PKI_TLSCA_PADDR=membersrvc:7054
       - CORE_SECURITY_ENABLED=true
+      - CORE_SECURITY_ATTRIBUTES_ENABLED=true
       - CORE_PEER_VALIDATOR_CONSENSUS_PLUGIN=pbft
       - CORE_PBFT_GENERAL_MODE=batch
       - CORE_PBFT_GENERAL_N=4
-    command: sh -c "sleep 10; peer node start"
+    command: sh -c "sleep 10; peer node start --peer-chaincodedev"
     links:
       - membersrvc
       - vp0
