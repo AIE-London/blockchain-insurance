@@ -23,6 +23,7 @@ var validate = require('express-jsonschema').validate;
 
 // [TODO] Add or modify generated schemas to create custom validation
 var schemas = {};
+schemas.authSchema = require("./config/schemas/authSchema.json");
 
 /**
  * Swagger Configuration
@@ -44,7 +45,7 @@ var options = {
 var swaggerSpec = swaggerJSDoc(options);
 
 // Re-use validation-schemas for swagger, but delete unneeded attributes
-
+swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/authSchema.json"), "authSchema");
 
 
 /**
@@ -102,13 +103,16 @@ app.get('/swagger.json', function(req, res) {
  *         in: body
  *         required: true
  *         schema:
- *           $ref: 'tbc'
+ *           $ref: '#/definitions/authSchema'
  *     responses:
  *       200:
  *         description: Successfully created
  */
-app.post('/auth/', function(request, response){
+app.post('/auth/', validate({ body : schemas.putSchema }), function(request, response){
   var responseBody = {};
+
+  var username = request.body.username;
+  var password = request.body.password;
 
   // [TODO] Change generated 'true' to create custom authentication logic
   if(true){
