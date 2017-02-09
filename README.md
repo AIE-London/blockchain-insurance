@@ -69,7 +69,7 @@ POST: http://localhost:7050/chaincode
 }
 ```
 
-5) The chaincode should now be deployed and ready to accept INVOKE or QUERY requests
+5) The chaincode should now be deployed and ready to accept INVOKE or QUERY requests.
 
 ### Running Blockchain Explorer
 
