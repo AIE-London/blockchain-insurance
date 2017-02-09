@@ -43,7 +43,7 @@ type ClaimDetails struct {
 	Status		string			`json:"status"`
 	Description	string			`json:"description"`
 	Incident	ClaimDetailsIncident	`json:"incident"`
-	Repair		ClaimDetailsClaimRepair	`json:"repair"`
+	Repair		ClaimDetailsClaimGarageReport	`json:"repair"`
 	Settlement	ClaimDetailsSettlement	`json:"settlement"`
 }
 
@@ -56,12 +56,14 @@ type ClaimDetailsIncident struct {
 }
 
 //==============================================================================================================================
-//	ClaimDetailsClaimRepair - Defines the structure for a ClaimDetailsClaimRepair object.
+//	ClaimDetailsClaimGarageReport - Defines the structure for a ClaimDetailsClaimGarageReport object.
 //==============================================================================================================================
-type ClaimDetailsClaimRepair struct {
+type ClaimDetailsClaimGarageReport struct {
 	Garage		string	`json:"garage"`
 	Estimate	int	`json:"estimate"`
 	Actual		int	`json:"actual"`
+	WriteOff	bool	`json:"writeOff"`
+	Notes		string	`json:"notes"`
 }
 
 //==============================================================================================================================
@@ -97,15 +99,6 @@ type ClaimDetailsSettlementPayment struct {
 //==============================================================================================================================
 type ClaimRelations struct {
 	RelatedPolicy	string	`json:"relatedPolicy"`
-}
-
-//==============================================================================================================================
-//	GarageReport - Defines the structure for a GarageReport object.
-//==============================================================================================================================
-type GarageReport struct {
-	Description         string          `json:"description"`
-	EstimatedDamageCost int             `json:"estimated_damage_cost"`
-	WriteOff            bool            `json:"write_off"`
 }
 
 //==============================================================================================================================
