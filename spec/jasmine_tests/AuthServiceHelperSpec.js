@@ -17,6 +17,9 @@ describe("AuthServiceHelper", function() {
         get: function(str){
           return "";
         },
+        params: {
+          username: "exampleAPI"
+        },
         headers: {
           origin: "http://aston-swagger-ui.eu-gb.mybluemix.net"
         }
@@ -37,6 +40,9 @@ describe("AuthServiceHelper", function() {
       var req = {
         get: function(str){
           return "";
+        },
+        params: {
+          username: "testuser"
         },
         headers: {
           origin: "https://aston-swagger-ui.eu-gb.mybluemix.net"
@@ -59,6 +65,9 @@ describe("AuthServiceHelper", function() {
         get: function(str){
           return "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE0ODA0Mzk3MDN9.B4p-G5vMimHKcl61dXOQvO5zLgKmnzGplM6YKk38UIo";
         },
+        params: {
+          username: "exampleAPI"
+        },
         headers: {
           origin: "https://random-url.com"
         }
@@ -79,6 +88,9 @@ describe("AuthServiceHelper", function() {
       var req = {
         get: function(str){
           return "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE0ODA0Mzk3MDN9.B4p-G5vMimHKcl61dXOQvO5zLgKmnzGplM6YKk38UIo";
+        },
+        params: {
+          username: "exampleAPI"
         },
         headers: {
           origin: "http://random-url.com"
@@ -101,6 +113,9 @@ describe("AuthServiceHelper", function() {
         get: function(str){
           return "Bearer JhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE0ODA0Mzk3MDN9.B4p-G5vMimHKcl61dXOQvO5zLgKmnzGplM6YKk38UIo";
         },
+        params: {
+          username: "exampleAPI"
+        },
         headers: {
           origin: "https://random-url.com"
         }
@@ -121,6 +136,9 @@ describe("AuthServiceHelper", function() {
       var req = {
         get: function(str){
           return "Bearer JhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE0ODA0Mzk3MDN9.B4p-G5vMimHKcl61dXOQvO5zLgKmnzGplM6YKk38UIo";
+        },
+        params: {
+          username: "exampleAPI"
         },
         headers: {
           origin: "http://random-url.com"
@@ -144,6 +162,9 @@ describe("AuthServiceHelper", function() {
       var req = {
         get: function(str){
           return "";
+        },
+        params: {
+          username: "exampleAPI"
         },
         headers: {
           origin: "http://aston-swagger-ui.eu-gb.mybluemix.net"
@@ -177,6 +198,9 @@ describe("AuthServiceHelper", function() {
         get: function(str){
           return "";
         },
+        params: {
+          username: "exampleAPI"
+        },
         headers: {
           origin: "https://aston-swagger-ui.eu-gb.mybluemix.net"
         }
@@ -209,6 +233,9 @@ describe("AuthServiceHelper", function() {
         get: function(str){
           return "";
         },
+        params: {
+          username: "exampleAPI"
+        },
         headers: {
           origin: "http://localhost:8080"
         }
@@ -240,6 +267,9 @@ describe("AuthServiceHelper", function() {
       var req = {
         get: function(str){
           return "";
+        },
+        params: {
+          username: "exampleAPI"
         },
         headers: {
           origin: "https://localhost:8080"
