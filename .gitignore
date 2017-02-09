@@ -38,3 +38,4 @@ jspm_packages
 
 # Custom
 .idea
+config/credentials/ibm_blockchain_credentials.json
