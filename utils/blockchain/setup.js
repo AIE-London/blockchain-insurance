@@ -30,13 +30,15 @@ var detect_tls_or_not = function(peer_array){
 //loop here, check if chaincode is up and running or not
 var check_if_deployed = function(e, attempt){
   if(e){
-    cb_deployed(e);																		//looks like an error pass it along
+    console.log("In check_if_deployed, error");
+    console.log(e);
+    //cb_deployed(e);																		//looks like an error pass it along
   }
   else if(attempt >= 15){																	//tried many times, lets give up and pass an err msg
     console.log('[preflight check]', attempt, ': failed too many times, giving up');
     var msg = 'chaincode is taking an unusually long time to start. this sounds like a network error, check peer logs';
     if(!process.error) process.error = {type: 'deploy', msg: msg};
-    cb_deployed(msg);
+    //cb_deployed(msg);
   }
   else{
     console.log('[preflight check]', attempt, ': testing if chaincode is ready');
@@ -62,7 +64,7 @@ var check_if_deployed = function(e, attempt){
       }
       else{
         console.log('[preflight check]', attempt, ': success');
-        cb_deployed(null);															//yes, lets go!
+        //cb_deployed(null);															//yes, lets go!
       }
     });
   }
