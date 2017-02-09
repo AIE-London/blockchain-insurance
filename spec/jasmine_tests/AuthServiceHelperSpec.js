@@ -42,7 +42,7 @@ describe("AuthServiceHelper", function() {
           return "";
         },
         params: {
-          username: "testuser"
+          username: "exampleAPI"
         },
         headers: {
           origin: "https://aston-swagger-ui.eu-gb.mybluemix.net"
