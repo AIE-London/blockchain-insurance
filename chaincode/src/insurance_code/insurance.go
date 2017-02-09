@@ -235,6 +235,7 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 	policy.ActivationDate = args[1];
 	policy.ExpiryDate = args[2];
 	policy.Excess, _ = strconv.Atoi(args[3])
+	policy.Owner = caller
 
 	bytes, err := json.Marshal(policy)
 
@@ -510,7 +511,11 @@ func (t *InsuranceChaincode)  get_caller_data(stub shim.ChaincodeStubInterface) 
 func (t *InsuranceChaincode) get_username(stub shim.ChaincodeStubInterface) (string, error) {
 
 	username, err := stub.ReadCertAttribute("username");
-	if err != nil { return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error()) }
+	if err != nil {
+		fmt.Printf("Couldn't get attribute 'username'. Error: %s", err)
+		return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error())
+	}
+
 	return string(username), nil
 }
 
