@@ -12,17 +12,43 @@ import (
 type InsuranceChaincode struct {
 }
 
+
+//type Policy struct {
+//	Id              string `json:"id"`
+//	Owner           string `json:"owner"`
+//	VehicleReg      string `json:"vehicle_reg"`
+//	ActivationDate  string `json:"activation_date"`
+//	ExpiryDate      string `json:"expiry_date"`
+//	Excess          int    `json:"excess"`
+//}
+
 //==============================================================================================================================
 //	Policy - Defines the structure for a policy object. JSON on right tells it what JSON fields to map to
 //			  that element when reading a JSON object into the struct e.g. JSON make -> Struct Make.
 //==============================================================================================================================
 type Policy struct {
-	Id              string `json:"id"`
-	Owner           string `json:"owner"`
-	VehicleReg      string `json:"vehicle_reg"`
-	ActivationDate  string `json:"activation_date"`
-	ExpiryDate      string `json:"expiry_date"`
-	Excess          int    `json:"excess"`
+	Id		string			`json:"id"`
+	Type		string			`json:"type"`
+	Details		PolicyDetails		`json:"details"`
+	Relations 	PolicyRelations		`json:"relations"`
+}
+
+//==============================================================================================================================
+//	PolicyDetails - Defines the structure for the policy details object.
+//==============================================================================================================================
+type PolicyDetails struct {
+	startDate	string			`json:"startDate"`
+	endDate		string			`json:"endDate"`
+	excess		int			`json:"excess"`
+}
+
+//==============================================================================================================================
+//	PolicyRelations - Defines the structure for a Policy object.
+//==============================================================================================================================
+type PolicyRelations struct {
+	user		string			`json:"user"`
+	vehicle		string			`json:"vehicle"`
+	claims		[]string		`json:"claims"`
 }
 
 //==============================================================================================================================
