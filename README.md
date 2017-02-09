@@ -22,6 +22,53 @@ docker-compose -f four-peer-ca.yaml up -d
 
 To test it is up and running properly hit [http://localhost:7050/chain](http://localhost:7050/chain)
 
+To run chaincode locally without having to deploy from a github url:
+
+1) Build your chaincode
+
+```
+go build ./
+```
+
+2) Register the chaincode with a peer
+
+```
+CORE_CHAINCODE_ID_NAME=insurance CORE_PEER_ADDRESS=0.0.0.0:7051 ./insurance_code
+```
+
+3) Send a REST request to enroll a user
+
+```
+POST: http://localhost:7050/registrar
+{
+  "enrollId": "bob",
+  "enrollSecret": "NOE63pEQbL25"
+}
+```
+
+4) Send a REST deploy request
+
+```
+POST: http://localhost:7050/chaincode
+{
+  "jsonrpc": "2.0",
+  "method": "deploy",
+  "params": {
+    "type": 1,
+    "chaincodeID":{
+        "name": "insurance"
+    },
+    "ctorMsg": {
+        "function":"init"
+    },
+    "secureContext": "bob"
+  },
+  "id": 1
+}
+```
+
+5) The chaincode should now be deployed and ready to accept INVOKE or QUERY requests
+
 ### Running Blockchain Explorer
 
 If you want to view your blockchian locally you can use the blockchain explorer.
