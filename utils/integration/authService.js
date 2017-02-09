@@ -56,8 +56,12 @@ module.exports = {
         header = req.get("Authorization").split(" ")[1];
       }
       console.log("HEADER: " + header);
+
+      var auth = config.web.auth;
+      auth.name = req.params.username;
+
       //verify JWT with Auth header in syntax "Bearer 12321k3123jlkj"
-      module.exports.verifyJWT(header, config.web.auth , function(ok){
+      module.exports.verifyJWT(header, auth , function(ok){
         if(ok){
           next();
         }

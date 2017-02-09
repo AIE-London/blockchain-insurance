@@ -2,6 +2,7 @@ var config =  require('config');
 
 // Integration
 var cloudantIntegration = require('./utils/integration/cloudantIntegration');
+var userService = require('./utils/integration/userService');
 var auth = require('./utils/integration/authService');
 
 // Helper Functions
@@ -111,35 +112,41 @@ app.get('/swagger.json', function(req, res) {
  *       200:
  *         description: Successfully created
  */
-app.post('/auth/', validate({ body : schemas.putSchema }), function(request, response){
+app.post('/auth/', validate({ body : schemas.authSchema }), function(request, response){
   var responseBody = {};
 
   var username = request.body.username;
   var password = request.body.password;
 
-  // [TODO] Change generated 'true' to create custom authentication logic
-  if(true){
-    auth.signJWT(request.body, {secret:"123", name: "exampleAPI"}, function(resp){
-      console.log(resp);
-      if(resp){
-        response.setHeader('Content-Type', 'application/json');
-        response.setHeader('Token', resp);
-        response.write(JSON.stringify(responseBody));
-        response.end();
-        return;
-      }
-      else{
-        responseBody.reason = "Server error";
-        response.setHeader('Content-Type', 'application/json');
-        response.statusCode = 500;
-        response.write(JSON.stringify(responseBody));
-        response.end();
-        return;
-      }
-    });
-  }else{
-    // [TODO] Add in logic for failed authentication
-  }
+  userService.authenticate(username, password, function(rsp){
+    if(rsp.details && rsp.details.carInsurance && rsp.details.carInsurance.type === "claimant"){
+      auth.signJWT(request.body, {secret:"123", name: username}, function(resp){
+        console.log(resp);
+        if(resp){
+          response.setHeader('Content-Type', 'application/json');
+          response.setHeader('Token', resp);
+          response.write(JSON.stringify(responseBody));
+          response.end();
+          return;
+        }
+        else{
+          responseBody.reason = "Server error";
+          response.setHeader('Content-Type', 'application/json');
+          response.statusCode = 500;
+          response.write(JSON.stringify(responseBody));
+          response.end();
+          return;
+        }
+      });
+    }else{
+      responseBody.reason = "Incorrect Credentials";
+      response.setHeader('Content-Type', 'application/json');
+      response.statusCode = 401;
+      response.write(JSON.stringify(responseBody));
+      response.end();
+      return;
+    }
+  });
 });
 
 /**
@@ -151,11 +158,17 @@ app.post('/auth/', validate({ body : schemas.putSchema }), function(request, res
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username
+ *         in: path
+ *         type: string
+ *         required: true
  *     responses:
  *       200:
  *         description: Successful
  */
-app.get('/' + apiPath.base + '/test', function(request, response){
+app.get('/' + apiPath.base + '/test/:username', function(request, response){
 	var responseBody = {};
 
   blockchainSetup.setup();
