@@ -36,6 +36,8 @@ type Policy struct {
 //==============================================================================================================================
 //	PolicyDetails - Defines the structure for the policy details object.
 //==============================================================================================================================
+
+
 type PolicyDetails struct {
 	startDate	string			`json:"startDate"`
 	endDate		string			`json:"endDate"`
@@ -43,10 +45,10 @@ type PolicyDetails struct {
 }
 
 //==============================================================================================================================
-//	PolicyRelations - Defines the structure for a Policy object.
+//	PolicyRelations - Defines the structure for  Policy object.
 //==============================================================================================================================
 type PolicyRelations struct {
-	user		string			`json:"user"`
+	owner		string			`json:"owner"`
 	vehicle		string			`json:"vehicle"`
 	claims		[]string		`json:"claims"`
 
@@ -238,24 +240,39 @@ func (t *InsuranceChaincode) Query(stub shim.ChaincodeStubInterface, function st
 
 //=================================================================================================================================
 //	 Add Policy  - Creates a Policy object and then saves it to the ledger.
-//          args - VehicleReg,ActivationDate,ExpiryDate,Excess
+//          args - type, startDate, endDate, excess, vehicle, claims
 //=================================================================================================================================
 func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running addPolicy()")
 
-	if len(args) != 4 {
+	if len(args) != 6 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 (VehicleReg,ActivationDate,ExpiryDate,Excess)")
 	}
 
+	//var policy Policy
+
+
+	//policy.Id = t.getNextPolicyId(stub)
+	//policy.VehicleReg = args[0];
+	//policy.ActivationDate = args[1];
+	//policy.ExpiryDate = args[2];
+	//policy.Excess, _ = strconv.Atoi(args[3])
+	//policy.Owner = caller
+
+
+	//new policy imp additions
 	var policy Policy
 
 	policy.Id = t.getNextPolicyId(stub)
-	policy.VehicleReg = args[0];
-	policy.ActivationDate = args[1];
-	policy.ExpiryDate = args[2];
-	policy.Excess, _ = strconv.Atoi(args[3])
-	policy.Owner = caller
+	policy.Type = args[0]
+	policy.Details.startDate = args[1]
+	policy.Details.endDate = args[2]
+	policy.Details.excess, _ = strconv.Atoi(args[3])
+	policy.Relations.owner = caller
+	policy.Relations.vehicle = args[4]
+	policy.Relations.claims = args[5]
+
 
 	bytes, err := json.Marshal(policy)
 
@@ -276,7 +293,7 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 
 	fmt.Println("running createClaim()")
 
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 (RelatedPolicy,Description, Date, Type)")
 	}
 
@@ -323,7 +340,7 @@ func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface,
 	}
 
 	//Check policy owner matches current user
-	if policy.Owner != caller {
+	if policy.Relations.owner != caller {
 		fmt.Printf("checkClaimIsValid: Policy owner is incorrect %s", claim.Relations.RelatedPolicy);
 		return false, errors.New("Policy owner incorrect");
 	}
