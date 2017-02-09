@@ -23,6 +23,7 @@ type Policy struct {
 	ActivationDate  string `json:"activation_date"`
 	ExpiryDate      string `json:"expiry_date"`
 	Excess          int    `json:"excess"`
+
 }
 
 //==============================================================================================================================
@@ -59,8 +60,8 @@ type ClaimDetailsIncident struct {
 //==============================================================================================================================
 type ClaimDetailsClaimRepair struct {
 	Garage		string	`json:"garage"`
-	Estimate	string	`json:"estimate"`
-	Actual		string	`json:"actual"`
+	Estimate	int	`json:"estimate"`
+	Actual		int	`json:"actual"`
 }
 
 //==============================================================================================================================
@@ -77,8 +78,8 @@ type ClaimDetailsSettlement struct {
 //	ClaimDetailsSettlementTotalLoss - Defines the structure for a ClaimDetailsSettlementTotalLoss object.
 //==============================================================================================================================
 type ClaimDetailsSettlementTotalLoss struct {
-	CarValueEstimate	string	`json:"carValueEstimate"`
-	CustomerAgreedValue	string	`json:"customerAgreedValue"`
+	CarValueEstimate	int	`json:"carValueEstimate"`
+	CustomerAgreedValue	int	`json:"customerAgreedValue"`
 }
 
 //==============================================================================================================================
@@ -87,7 +88,7 @@ type ClaimDetailsSettlementTotalLoss struct {
 type ClaimDetailsSettlementPayment struct {
 	RecipientType	string	`json:"recipientType"`
 	Recipient	string	`json:"recipient"`
-	Amount		string	`json:"amount"`
+	Amount		int	`json:"amount"`
 	Status		string	`json:"status"`
 }
 
