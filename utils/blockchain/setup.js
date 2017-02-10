@@ -79,10 +79,20 @@ var chaincode = {
 };
 
 var loadCredentials = function(){
+
+  console.log("--- Loading Credentials ---");
   if(process.env.VCAP_SERVICES){
-    var servicesObject =- JSON.parse(process.env.VCAP_SERVICES);
+
+    console.log("--- VCAP EXISTS ---");
+
+    var servicesObject = JSON.parse(process.env.VCAP_SERVICES);
     for (var i in servicesObject){
+
+      console.log("--- I ---");
+      console.log(i);
+
       if(i.indexOf('ibm-blockchain') >= 0){													//looks close enough
+        console.log("Found ibm-blockchain");
         if(servicesObject[i][0].credentials.error){
           console.log('!\n!\n! Error from Bluemix: \n', servicesObject[i][0].credentials.error, '!\n!\n');
           peers = null;
@@ -185,6 +195,10 @@ var loadSDK = function(){
   };
 
   if (options.chaincode) {
+
+    console.log("--- Options ---");
+    console.log(options);
+
     ibc.load(options, sdkLoaded);
   } else {
     console.error("Didn't try load SDK because there is no valid chaincode");
