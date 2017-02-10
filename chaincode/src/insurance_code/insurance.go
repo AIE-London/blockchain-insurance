@@ -12,16 +12,6 @@ import (
 type InsuranceChaincode struct {
 }
 
-
-//type Policy struct {
-//	Id              string `json:"id"`
-//	Owner           string `json:"owner"`
-//	VehicleReg      string `json:"vehicle_reg"`
-//	ActivationDate  string `json:"activation_date"`
-//	ExpiryDate      string `json:"expiry_date"`
-//	Excess          int    `json:"excess"`
-//}
-
 //==============================================================================================================================
 //	Policy - Defines the structure for a policy object. JSON on right tells it what JSON fields to map to
 //			  that element when reading a JSON object into the struct e.g. JSON make -> Struct Make.
@@ -39,18 +29,18 @@ type Policy struct {
 
 
 type PolicyDetails struct {
-	startDate	string			`json:"startDate"`
-	endDate		string			`json:"endDate"`
-	excess		int			`json:"excess"`
+	StartDate	string			`json:"startDate"`
+	EndDate		string			`json:"endDate"`
+	Excess		int			`json:"excess"`
 }
 
 //==============================================================================================================================
 //	PolicyRelations - Defines the structure for a PolicyRelations object.
 //==============================================================================================================================
 type PolicyRelations struct {
-	owner		string			`json:"owner"`
-	vehicle		string			`json:"vehicle"`
-	claims		[]string		`json:"claims"`
+	Owner		string			`json:"owner"`
+	Vehicle		string			`json:"vehicle"`
+	Claims		[]string		`json:"claims"`
 
 }
 
@@ -286,39 +276,18 @@ func (t *InsuranceChaincode) Query(stub shim.ChaincodeStubInterface, function st
 
 //=================================================================================================================================
 //	 Add Policy  - Creates a Policy object and then saves it to the ledger.
-//          args - type, startDate, endDate, excess, vehicle, claims
+//          args - startDate, endDate, excess, vehicle
 //=================================================================================================================================
 func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running addPolicy()")
 
-	if len(args) != 6 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 (VehicleReg,ActivationDate,ExpiryDate,Excess)")
+	if len(args) != 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 4 (ActivationDate,ExpiryDate,Excess,VehicleReg)")
 	}
 
-	//var policy Policy
-
-
-	//policy.Id = t.getNextPolicyId(stub)
-	//policy.VehicleReg = args[0];
-	//policy.ActivationDate = args[1];
-	//policy.ExpiryDate = args[2];
-	//policy.Excess, _ = strconv.Atoi(args[3])
-	//policy.Owner = caller
-
-
-	//new policy imp additions
-	var policy Policy
-
-	policy.Id = t.getNextPolicyId(stub)
-	policy.Type = args[0]
-	policy.Details.startDate = args[1]
-	policy.Details.endDate = args[2]
-	policy.Details.excess, _ = strconv.Atoi(args[3])
-	policy.Relations.owner = caller
-	policy.Relations.vehicle = args[4]
-	policy.Relations.claims = args[5]
-
+	excess, _ := strconv.Atoi(args[2])
+	policy := t.newPolicy(t.getNextPolicyId(stub), caller, args[0], args[1], excess, args[3])
 
 	bytes, err := json.Marshal(policy)
 
@@ -329,6 +298,25 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 	if err != nil { fmt.Printf("addPolicy: Error storing policy record: %s", err); return nil, errors.New("Error storing policy record") }
 
 	return nil, nil
+}
+
+//=================================================================================================================================
+//	 newPolicy	-	Constructs a new policy value
+//=================================================================================================================================
+func (t *InsuranceChaincode) newPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
+	var policy Policy
+
+	policy.Id = id
+	policy.Type = "policy"
+
+	policy.Details.StartDate = startDate
+	policy.Details.EndDate = endDate
+	policy.Details.Excess = excess
+
+	policy.Relations.Owner = owner
+	policy.Relations.Vehicle = vehicleReg
+
+	return policy
 }
 
 //=================================================================================================================================
@@ -386,7 +374,7 @@ func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface,
 	}
 
 	//Check policy owner matches current user
-	if policy.Relations.owner != caller {
+	if policy.Relations.Owner != caller {
 		fmt.Printf("checkClaimIsValid: Policy owner is incorrect %s", claim.Relations.RelatedPolicy);
 		return false, errors.New("Policy owner incorrect");
 	}
@@ -593,13 +581,14 @@ func (t *InsuranceChaincode)  get_caller_data(stub shim.ChaincodeStubInterface) 
 
 func (t *InsuranceChaincode) get_username(stub shim.ChaincodeStubInterface) (string, error) {
 
-	username, err := stub.ReadCertAttribute("username");
-	if err != nil {
-		fmt.Printf("Couldn't get attribute 'username'. Error: %s", err)
-		return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error())
-	}
-
-	return string(username), nil
+	//username, err := stub.ReadCertAttribute("username");
+	//if err != nil {
+	//	fmt.Printf("Couldn't get attribute 'username'. Error: %s", err)
+	//	return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error())
+	//}
+    //
+	//return string(username), nil
+	return "dummy-user", nil
 }
 
 //==============================================================================================================================
@@ -608,8 +597,8 @@ func (t *InsuranceChaincode) get_username(stub shim.ChaincodeStubInterface) (str
 //==============================================================================================================================
 
 func (t *InsuranceChaincode) check_affiliation(stub shim.ChaincodeStubInterface) (string, error) {
-	affiliation, err := stub.ReadCertAttribute("role");
-	if err != nil { return "", errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
-	return string(affiliation), nil
-
+	//affiliation, err := stub.ReadCertAttribute("role");
+	//if err != nil { return "", errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
+	//return string(affiliation), nil
+	return "dummy-affiliation", nil
 }
