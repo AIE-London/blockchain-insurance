@@ -17,8 +17,8 @@ type InsuranceChaincode struct {
 //			  that element when reading a JSON object into the struct e.g. JSON make -> Struct Make.
 //==============================================================================================================================
 type Policy struct {
-	Id		string			`json:"id"`
-	Type		string			`json:"type"`
+	Id		string					`json:"id"`
+	Type		string				`json:"type"`
 	Details		PolicyDetails		`json:"details"`
 	Relations 	PolicyRelations		`json:"relations"`
 }
@@ -31,7 +31,7 @@ type Policy struct {
 type PolicyDetails struct {
 	StartDate	string			`json:"startDate"`
 	EndDate		string			`json:"endDate"`
-	Excess		int			`json:"excess"`
+	Excess		int				`json:"excess"`
 }
 
 //==============================================================================================================================
@@ -48,8 +48,8 @@ type PolicyRelations struct {
 //	Claim - Defines the structure for a Claim object.
 //==============================================================================================================================
 type Claim struct {
-	Id		string		`json:"id"`
-	Type		string		`json:"type"`
+	Id		string				`json:"id"`
+	Type		string			`json:"type"`
 	Details		ClaimDetails	`json:"details"`
 	Relations 	ClaimRelations	`json:"relations"`
 }
@@ -58,11 +58,11 @@ type Claim struct {
 //	ClaimDetails - Defines the structure for a ClaimDetails object.
 //==============================================================================================================================
 type ClaimDetails struct {
-	Status		string				`json:"status"`
-	Description	string				`json:"description"`
-	Incident	ClaimDetailsIncident		`json:"incident"`
+	Status		string							`json:"status"`
+	Description	string							`json:"description"`
+	Incident	ClaimDetailsIncident			`json:"incident"`
 	Repair		ClaimDetailsClaimGarageReport	`json:"repair"`
-	Settlement	ClaimDetailsSettlement		`json:"settlement"`
+	Settlement	ClaimDetailsSettlement			`json:"settlement"`
 }
 
 //==============================================================================================================================
@@ -78,8 +78,8 @@ type ClaimDetailsIncident struct {
 //==============================================================================================================================
 type ClaimDetailsClaimGarageReport struct {
 	Garage		string	`json:"garage"`
-	Estimate	int	`json:"estimate"`
-	Actual		int	`json:"actual"`
+	Estimate	int		`json:"estimate"`
+	Actual		int		`json:"actual"`
 	WriteOff	bool	`json:"writeOff"`
 	Notes		string	`json:"notes"`
 }
@@ -88,8 +88,8 @@ type ClaimDetailsClaimGarageReport struct {
 //	ClaimDetailsSettlement - Defines the structure for a ClaimDetailsSettlement object.
 //==============================================================================================================================
 type ClaimDetailsSettlement struct {
-	Decision	string				`json:"decision"`
-	Dispute		bool				`json:"dispute"`
+	Decision	string							`json:"decision"`
+	Dispute		bool							`json:"dispute"`
 	TotalLoss	ClaimDetailsSettlementTotalLoss	`json:"totalLoss"`
 	Payments	[]ClaimDetailsSettlementPayment	`json:"payments"`
 }
@@ -107,9 +107,9 @@ type ClaimDetailsSettlementTotalLoss struct {
 //==============================================================================================================================
 type ClaimDetailsSettlementPayment struct {
 	RecipientType	string	`json:"recipientType"`
-	Recipient	string	`json:"recipient"`
-	Amount		int	`json:"amount"`
-	Status		string	`json:"status"`
+	Recipient	string		`json:"recipient"`
+	Amount		int			`json:"amount"`
+	Status		string		`json:"status"`
 }
 
 //==============================================================================================================================
@@ -123,8 +123,8 @@ type ClaimRelations struct {
 //	Vehicle - Defines the structure for a Vehicle object.
 //==============================================================================================================================
 type Vehicle struct {
-	Id		string			`json:"id"`
-	Type		string			`json:"type"`
+	Id			string				`json:"id"`
+	Type		string				`json:"type"`
 	Details		VehicleDetails		`json:"details"`
 }
 
@@ -132,20 +132,20 @@ type Vehicle struct {
 //	VehicleDetails - Defines the structure for a VehicleDetails object.
 //==============================================================================================================================
 type VehicleDetails struct {
-	Make		string		`json:"make"`
-	Model		string		`json:"model"`
+	Make			string		`json:"make"`
+	Model			string		`json:"model"`
 	Registration	string		`json:"registration"`
-	Year		string		`json:"year"`
-	Mileage		string		`json:"mileage"`
+	Year			string		`json:"year"`
+	Mileage			string		`json:"mileage"`
 }
 
 //==============================================================================================================================
 //	User - Defines the structure for a User object.
 //==============================================================================================================================
 type User struct {
-	Id		string		`json:"id"`
-	Type		string		`json:"type"`
-	Details		UserDetails	`json:"details"`
+	Id			string			`json:"id"`
+	Type		string			`json:"type"`
+	Details		UserDetails		`json:"details"`
 	Relations	UserRelations	`json:"relations"`
 }
 
@@ -203,8 +203,8 @@ const   STATE_AWAITING_POLICE_REPORT                = "awaiting_police_report"
 const   STATE_AWAITING_GARAGE_REPORT                = "awaiting_garage_report"
 const   STATE_AWAITING_GARAGE_WORK_CONFIRMATION     = "awaiting_garage_work"
 const   STATE_SETTLED  			                    = "settled"
-const	STATUS_OPEN					= "open"
-const	STATUS_CLOSED					= "closed"
+const	STATUS_OPEN									= "open"
+const	STATUS_CLOSED								= "closed"
 
 //==============================================================================================================================
 //	 Claim Type types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
@@ -301,7 +301,7 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 }
 
 //=================================================================================================================================
-//	 newPolicy	-	Constructs a new policy value
+//	 newPolicy	-	Constructs a new policy
 //=================================================================================================================================
 func (t *InsuranceChaincode) newPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
 	var policy Policy
@@ -321,25 +321,17 @@ func (t *InsuranceChaincode) newPolicy(id string, owner string, startDate string
 
 //=================================================================================================================================
 //	 createClaim - Creates a Claim object and then saves it to the ledger.
-//          args - RelatedPolicy,Description,Date,Type
+//          args - RelatedPolicy,Description,Date,IncidentType
 //=================================================================================================================================
 func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running createClaim()")
 
-	if len(args) != 5 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 (RelatedPolicy,Description, Date, Type)")
+	if len(args) != 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 4 (RelatedPolicy,Description, Date, IncidentType)")
 	}
 
-	var claim Claim
-
-	claim.Id = t.getNextClaimId(stub)
-	claim.Relations.RelatedPolicy = args[0]
-	claim.Details.Description = args[1]
-	claim.Details.Incident.Date = args[2]
-	claim.Details.Incident.Type = args[3]
-
-	claim.Details.Status = STATUS_OPEN
+	claim := t.newClaim(t.getNextClaimId(stub), args[0], args[1], args[2], args[3])
 
 	isValid, err := t.checkClaimIsValid(stub, caller, claim);
 
@@ -357,6 +349,26 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 	if err != nil { fmt.Printf("createClaim: Error storing claim record: %s", err); return nil, errors.New("Error storing claim record") }
 
 	return nil, nil
+}
+
+//=================================================================================================================================
+//	 newClaim	-	Constructs a new claim
+//=================================================================================================================================
+func (t *InsuranceChaincode) newClaim(id string, relatedPolicy string, description string, incidentDate string, incidentType string) (Claim) {
+
+	var claim Claim
+
+	claim.Id = id
+	claim.Type = "claim"
+
+	claim.Relations.RelatedPolicy = relatedPolicy
+	claim.Details.Description = description
+	claim.Details.Incident.Date = incidentDate
+	claim.Details.Incident.Type = incidentType
+
+	claim.Details.Status = STATUS_OPEN
+
+	return claim
 }
 
 //=================================================================================================================================
@@ -390,7 +402,7 @@ func (t *InsuranceChaincode) retrieveAllPoliciesJSON(stub shim.ChaincodeStubInte
 
 	result := "["
 
-	for i := 0; i <= numberOfPolicies; i++ {
+	for i := 1; i <= numberOfPolicies; i++ {
 
 		policyId := POLICY_ID_PREFIX + strconv.Itoa(i)
 		policyJSON, err := t.retrievePolicyJSON(stub, policyId)
@@ -452,7 +464,7 @@ func (t *InsuranceChaincode) retrieveAllClaimsJSON(stub shim.ChaincodeStubInterf
 
 	result := "["
 
-	for i := 0; i <= numberOfClaims; i++ {
+	for i := 1; i <= numberOfClaims; i++ {
 
 		claimId := CLAIM_ID_PREFIX + strconv.Itoa(i)
 		claimJSON, err := t.retrieveClaimJSON(stub, claimId)
