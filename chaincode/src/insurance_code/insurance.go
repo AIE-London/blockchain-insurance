@@ -6,6 +6,7 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"strconv"
 	"encoding/json"
+	"github.com/hyperledger/fabric/membersrvc/ca"
 )
 
 // InsuranceChaincode example simple Chaincode implementation
@@ -17,8 +18,8 @@ type InsuranceChaincode struct {
 //			  that element when reading a JSON object into the struct e.g. JSON make -> Struct Make.
 //==============================================================================================================================
 type Policy struct {
-	Id		string					`json:"id"`
-	Type		string				`json:"type"`
+	Id		string			`json:"id"`
+	Type		string			`json:"type"`
 	Details		PolicyDetails		`json:"details"`
 	Relations 	PolicyRelations		`json:"relations"`
 }
@@ -26,30 +27,27 @@ type Policy struct {
 //==============================================================================================================================
 //	PolicyDetails - Defines the structure for the PolicyDetails object.
 //==============================================================================================================================
-
-
 type PolicyDetails struct {
-	StartDate	string			`json:"startDate"`
-	EndDate		string			`json:"endDate"`
-	Excess		int				`json:"excess"`
+	StartDate	string		`json:"startDate"`
+	EndDate		string		`json:"endDate"`
+	Excess		int		`json:"excess"`
 }
 
 //==============================================================================================================================
 //	PolicyRelations - Defines the structure for a PolicyRelations object.
 //==============================================================================================================================
 type PolicyRelations struct {
-	Owner		string			`json:"owner"`
-	Vehicle		string			`json:"vehicle"`
-	Claims		[]string		`json:"claims"`
-
+	Owner		string		`json:"owner"`
+	Vehicle		string		`json:"vehicle"`
+	Claims		[]string	`json:"claims"`
 }
 
 //==============================================================================================================================
 //	Claim - Defines the structure for a Claim object.
 //==============================================================================================================================
 type Claim struct {
-	Id		string				`json:"id"`
-	Type		string			`json:"type"`
+	Id		string		`json:"id"`
+	Type		string		`json:"type"`
 	Details		ClaimDetails	`json:"details"`
 	Relations 	ClaimRelations	`json:"relations"`
 }
@@ -58,11 +56,11 @@ type Claim struct {
 //	ClaimDetails - Defines the structure for a ClaimDetails object.
 //==============================================================================================================================
 type ClaimDetails struct {
-	Status		string							`json:"status"`
-	Description	string							`json:"description"`
-	Incident	ClaimDetailsIncident			`json:"incident"`
+	Status		string				`json:"status"`
+	Description	string				`json:"description"`
+	Incident	ClaimDetailsIncident		`json:"incident"`
 	Repair		ClaimDetailsClaimGarageReport	`json:"repair"`
-	Settlement	ClaimDetailsSettlement			`json:"settlement"`
+	Settlement	ClaimDetailsSettlement		`json:"settlement"`
 }
 
 //==============================================================================================================================
@@ -78,8 +76,8 @@ type ClaimDetailsIncident struct {
 //==============================================================================================================================
 type ClaimDetailsClaimGarageReport struct {
 	Garage		string	`json:"garage"`
-	Estimate	int		`json:"estimate"`
-	Actual		int		`json:"actual"`
+	Estimate	int	`json:"estimate"`
+	Actual		int	`json:"actual"`
 	WriteOff	bool	`json:"writeOff"`
 	Notes		string	`json:"notes"`
 }
@@ -88,8 +86,8 @@ type ClaimDetailsClaimGarageReport struct {
 //	ClaimDetailsSettlement - Defines the structure for a ClaimDetailsSettlement object.
 //==============================================================================================================================
 type ClaimDetailsSettlement struct {
-	Decision	string							`json:"decision"`
-	Dispute		bool							`json:"dispute"`
+	Decision	string				`json:"decision"`
+	Dispute		bool				`json:"dispute"`
 	TotalLoss	ClaimDetailsSettlementTotalLoss	`json:"totalLoss"`
 	Payments	[]ClaimDetailsSettlementPayment	`json:"payments"`
 }
@@ -106,9 +104,9 @@ type ClaimDetailsSettlementTotalLoss struct {
 //	ClaimDetailsSettlementPayment - Defines the structure for a ClaimDetailsSettlementPayment object.
 //==============================================================================================================================
 type ClaimDetailsSettlementPayment struct {
-	RecipientType	string	`json:"recipientType"`
+	RecipientType	string		`json:"recipientType"`
 	Recipient	string		`json:"recipient"`
-	Amount		int			`json:"amount"`
+	Amount		int		`json:"amount"`
 	Status		string		`json:"status"`
 }
 
@@ -123,8 +121,8 @@ type ClaimRelations struct {
 //	Vehicle - Defines the structure for a Vehicle object.
 //==============================================================================================================================
 type Vehicle struct {
-	Id			string				`json:"id"`
-	Type		string				`json:"type"`
+	Id		string			`json:"id"`
+	Type		string			`json:"type"`
 	Details		VehicleDetails		`json:"details"`
 }
 
@@ -134,19 +132,19 @@ type Vehicle struct {
 type VehicleDetails struct {
 	Make			string		`json:"make"`
 	Model			string		`json:"model"`
-	Registration	string		`json:"registration"`
+	Registration		string		`json:"registration"`
 	Year			string		`json:"year"`
-	Mileage			string		`json:"mileage"`
+	Mileage			int		`json:"mileage"`
 }
 
 //==============================================================================================================================
 //	User - Defines the structure for a User object.
 //==============================================================================================================================
 type User struct {
-	Id			string			`json:"id"`
+	Id		string			`json:"id"`
 	Type		string			`json:"type"`
 	Details		UserDetails		`json:"details"`
-	Relations	UserRelations	`json:"relations"`
+	Relations	UserRelations		`json:"relations"`
 }
 
 //==============================================================================================================================
@@ -187,35 +185,39 @@ type Coordinates struct {
 //   Ids are incremental so knowing the latest id is useful when querying for
 //   all domain objects of a certain type.
 //==============================================================================================================================
-const   CURRENT_POLICY_ID_KEY      =  "currentPolicyId"
-const   CURRENT_CLAIM_ID_KEY   =  "currentClaimId"
+const   CURRENT_POLICY_ID_KEY	= "currentPolicyId"
+const	CURRENT_VEHICLE_ID_KEY	= "currentVehicleId"
+const	CURRENT_USER_ID_KEY	= "currentUserId"
+const   CURRENT_CLAIM_ID_KEY	= "currentClaimId"
 
 //==============================================================================================================================
 //	 Prefixes for the different domain object type ids
 //==============================================================================================================================
-const   POLICY_ID_PREFIX      =  "P"
-const   CLAIM_ID_PREFIX   =  "C"
+const   POLICY_ID_PREFIX	= "P"
+const	VEHICLE_ID_PREFIX	= "V"
+const	USER_ID_PREFIX		= "U"
+const   CLAIM_ID_PREFIX		= "C"
 
 //==============================================================================================================================
 //	 Claim Status types - TODO Flesh these out. TODO Following IBM sample, but should/could these be enums?
 //==============================================================================================================================
-const   STATE_AWAITING_POLICE_REPORT                = "awaiting_police_report"
-const   STATE_AWAITING_GARAGE_REPORT                = "awaiting_garage_report"
-const   STATE_AWAITING_GARAGE_WORK_CONFIRMATION     = "awaiting_garage_work"
-const   STATE_SETTLED  			                    = "settled"
-const	STATUS_OPEN									= "open"
-const	STATUS_CLOSED								= "closed"
+const   STATE_AWAITING_POLICE_REPORT			= "awaiting_police_report"
+const   STATE_AWAITING_GARAGE_REPORT			= "awaiting_garage_report"
+const   STATE_AWAITING_GARAGE_WORK_CONFIRMATION		= "awaiting_garage_work"
+const   STATE_SETTLED					= "settled"
+const	STATUS_OPEN					= "open"
+const	STATUS_CLOSED					= "closed"
 
 //==============================================================================================================================
 //	 Claim Type types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
 //==============================================================================================================================
-const   SINGLE_PARTY                =  "single_party"
-const   MULTIPLE_PARTIES  			=  "multiple_parties"
+const   SINGLE_PARTY		=  "single_party"
+const   MULTIPLE_PARTIES	=  "multiple_parties"
 
 //==============================================================================================================================
 //	 Settlement Decision types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
 //==============================================================================================================================
-const   TOTAL_LOSS                  =  "total_loss"
+const   TOTAL_LOSS		=  "total_loss"
 
 func main() {
 	err := shim.Start(new(InsuranceChaincode))
@@ -224,10 +226,54 @@ func main() {
 	}
 }
 
-// TODO Set reference data?
 func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
+	//Policy init test data
+	policyArgs1 := []string{"31/01/17", "30/01/18", "300", "BP16BRV"}
+	policyCaller1 := "user_type1_1"
+	policyCallerAffiliation1 := "group1"
+
+	policyId1 := t.getNextPolicyId(stub)
+	t.addPolicy(stub, policyCaller1, policyCallerAffiliation1, policyArgs1)
+
+	policyArgs2 := []string{"11/01/17", "10/01/18", "250", "DZ08TYV"}
+	policyCaller2 := "user_type1_2"
+	policyCallerAffiliation2 := "group1"
+
+	policyId2 := t.getNextPolicyId(stub)
+	t.addPolicy(stub, policyCaller2, policyCallerAffiliation2, policyArgs2)
+
+	//Vehicle init test data
+	vehicleArgs1 := []string{"Ford", "Focus", "BP16BRV", "2016", "7500"}
+	vehicleCaller1 := "vehicle_type1_1"
+	vehicleCallerAffiliation1 := "group1"
+
+	t.addVehicle(stub, vehicleCaller1, vehicleCallerAffiliation1, vehicleArgs1)
+
+	vehicleArgs2 := []string{"Vauxhall", "Corsa", "DZ08TYV", "2008", "33500"}
+	vehicleCaller2 := "vehicle_type1_2"
+	vehicleCallerAffiliation2 := "group1"
+
+	t.addVehicle(stub, vehicleCaller2, vehicleCallerAffiliation2, vehicleArgs2)
+
+	//User init test data
+	userArgs1 := []string{"John", "Hancock", "john.hancock@outlook.com", policyId1}
+	userCaller1 := "user_type1_1"
+	userCallerAffiliation1 := "group1"
+
+	t.addUser(stub, userCaller1, userCallerAffiliation1, userArgs1)
+
+	userArgs2 := []string{"Jane", "Doe", "jane.doe@outlook.com", policyId2}
+	userCaller2 := "user_type1_2"
+	userCallerAffiliation2 := "group1"
+
+	t.addUser(stub, userCaller2, userCallerAffiliation2, userArgs2)
+
+	//add approved garages (new + add methods)
+
 	stub.PutState(CURRENT_POLICY_ID_KEY, []byte("0"))
+	stub.PutState(CURRENT_VEHICLE_ID_KEY, []byte("0"))
+	stub.PutState(CURRENT_USER_ID_KEY, []byte("0"))
 	stub.PutState(CURRENT_CLAIM_ID_KEY, []byte("0"))
 	return nil, nil
 }
@@ -317,6 +363,92 @@ func (t *InsuranceChaincode) newPolicy(id string, owner string, startDate string
 	policy.Relations.Vehicle = vehicleReg
 
 	return policy
+}
+
+//=================================================================================================================================
+//	 Add Vehicle  - Creates a Vehicle object and then saves it to the ledger.
+//          args - make, model, registration, year, mileage
+//=================================================================================================================================
+func (t *InsuranceChaincode) addVehicle(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
+
+	fmt.Println("running addVehicle()")
+
+	if len(args) != 5 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 5 (Make, Model, Registration, Year, Mileage)")
+	}
+
+	mileage, _ := strconv.Atoi(args[4])
+	vehicle := t.newVehicle(t.getNextVehicleId(stub), args[0], args[1], args[2], args[3], mileage)
+
+	bytes, err := json.Marshal(vehicle)
+
+	if err != nil { fmt.Printf("addVehicle Error converting vehicle record: %s", err); return nil, errors.New("Error converting vehicle record") }
+
+	err = stub.PutState(vehicle.Id, bytes)
+
+	if err != nil { fmt.Printf("addVehicle: Error storing vehicle record: %s", err); return nil, errors.New("Error storing vehicle record") }
+
+	return nil, nil
+}
+
+//=================================================================================================================================
+//	 New Vehicle	-	Constructs a new vehicle
+//=================================================================================================================================
+func (t *InsuranceChaincode) newVehicle(id string, make string, model string, registration string, year string, mileage int) (Vehicle) {
+	var vehicle Vehicle
+
+	vehicle.Id = id
+	vehicle.Type = "vehicle"
+
+	vehicle.Details.Make = make
+	vehicle.Details.Model = model
+	vehicle.Details.Registration = registration
+	vehicle.Details.Year = year
+	vehicle.Details.Mileage = mileage
+
+	return vehicle
+}
+
+//=================================================================================================================================
+//	 Add User  - Creates a User object and then saves it to the ledger.
+//          args - forename, surname, email, relatedPolicy
+//=================================================================================================================================
+func (t *InsuranceChaincode) addUser(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
+
+	fmt.Println("running addUser()")
+
+	if len(args) != 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 4 (Forename, Surname, Email, RelatedPolicy)")
+	}
+
+	user := t.newUser(t.getNextUserId(stub), args[0], args[1], args[2], args[3])
+
+	bytes, err := json.Marshal(user)
+
+	if err != nil { fmt.Printf("addVehicle Error converting vehicle record: %s", err); return nil, errors.New("Error converting vehicle record") }
+
+	err = stub.PutState(user.Id, bytes)
+
+	if err != nil { fmt.Printf("addVehicle: Error storing vehicle record: %s", err); return nil, errors.New("Error storing vehicle record") }
+
+	return nil, nil
+}
+
+//=================================================================================================================================
+//	 New User	-	Constructs a new user
+//=================================================================================================================================
+func (t *InsuranceChaincode) newUser(id string, forename string, surname string, email string, relatedPolicy string) (User) {
+	var user User
+
+	user.Id = id
+	user.Type = "user"
+
+	user.Details.Forename = forename
+	user.Details.Surname = surname
+	user.Details.Email = email
+	user.Relations.RelatedPolicy = relatedPolicy
+
+	return user
 }
 
 //=================================================================================================================================
@@ -530,6 +662,16 @@ func (t *InsuranceChaincode) getCurrentPolicyIdNumber(stub shim.ChaincodeStubInt
 func (t *InsuranceChaincode) getNextPolicyId(stub shim.ChaincodeStubInterface) (string) {
 
 	return t.getNextId(stub, CURRENT_POLICY_ID_KEY, POLICY_ID_PREFIX);
+}
+
+func (t *InsuranceChaincode) getNextVehicleId(stub shim.ChaincodeStubInterface) (string) {
+
+	return t.getNextId(stub, CURRENT_VEHICLE_ID_KEY, VEHICLE_ID_PREFIX);
+}
+
+func (t *InsuranceChaincode) getNextUserId(stub shim.ChaincodeStubInterface) (string) {
+
+	return t.getNextId(stub, CURRENT_USER_ID_KEY, USER_ID_PREFIX);
 }
 
 func (t *InsuranceChaincode) getCurrentClaimIdNumber(stub shim.ChaincodeStubInterface) (int) {
