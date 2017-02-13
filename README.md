@@ -35,7 +35,7 @@ go build ./
 2) Register the chaincode with a peer
 
 ```
-CORE_CHAINCODE_ID_NAME=insurance CORE_PEER_ADDRESS=0.0.0.0:7051 ./insurance_code
+CORE_CHAINCODE_ID_NAME=insurance CORE_PEER_ADDRESS=0.0.0.0:7051 ./insurance_main
 ```
 
 3) Send a REST request to enroll a user

@@ -6,117 +6,12 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"strconv"
 	"encoding/json"
+	"policy"
+	"claim"
 )
 
 // InsuranceChaincode example simple Chaincode implementation
 type InsuranceChaincode struct {
-}
-
-//==============================================================================================================================
-//	Policy - Defines the structure for a policy object. JSON on right tells it what JSON fields to map to
-//			  that element when reading a JSON object into the struct e.g. JSON make -> Struct Make.
-//==============================================================================================================================
-type Policy struct {
-	Id		string					`json:"id"`
-	Type		string				`json:"type"`
-	Details		PolicyDetails		`json:"details"`
-	Relations 	PolicyRelations		`json:"relations"`
-}
-
-//==============================================================================================================================
-//	PolicyDetails - Defines the structure for the PolicyDetails object.
-//==============================================================================================================================
-
-
-type PolicyDetails struct {
-	StartDate	string			`json:"startDate"`
-	EndDate		string			`json:"endDate"`
-	Excess		int				`json:"excess"`
-}
-
-//==============================================================================================================================
-//	PolicyRelations - Defines the structure for a PolicyRelations object.
-//==============================================================================================================================
-type PolicyRelations struct {
-	Owner		string			`json:"owner"`
-	Vehicle		string			`json:"vehicle"`
-	Claims		[]string		`json:"claims"`
-
-}
-
-//==============================================================================================================================
-//	Claim - Defines the structure for a Claim object.
-//==============================================================================================================================
-type Claim struct {
-	Id		string				`json:"id"`
-	Type		string			`json:"type"`
-	Details		ClaimDetails	`json:"details"`
-	Relations 	ClaimRelations	`json:"relations"`
-}
-
-//==============================================================================================================================
-//	ClaimDetails - Defines the structure for a ClaimDetails object.
-//==============================================================================================================================
-type ClaimDetails struct {
-	Status		string							`json:"status"`
-	Description	string							`json:"description"`
-	Incident	ClaimDetailsIncident			`json:"incident"`
-	Repair		ClaimDetailsClaimGarageReport	`json:"repair"`
-	Settlement	ClaimDetailsSettlement			`json:"settlement"`
-}
-
-//==============================================================================================================================
-//	ClaimDetailsIncident - Defines the structure for a ClaimDetailsIncident object.
-//==============================================================================================================================
-type ClaimDetailsIncident struct {
-	Date	string	`json:"date"`
-	Type	string	`json:"type"`
-}
-
-//==============================================================================================================================
-//	ClaimDetailsClaimGarageReport - Defines the structure for a ClaimDetailsClaimGarageReport object.
-//==============================================================================================================================
-type ClaimDetailsClaimGarageReport struct {
-	Garage		string	`json:"garage"`
-	Estimate	int		`json:"estimate"`
-	Actual		int		`json:"actual"`
-	WriteOff	bool	`json:"writeOff"`
-	Notes		string	`json:"notes"`
-}
-
-//==============================================================================================================================
-//	ClaimDetailsSettlement - Defines the structure for a ClaimDetailsSettlement object.
-//==============================================================================================================================
-type ClaimDetailsSettlement struct {
-	Decision	string							`json:"decision"`
-	Dispute		bool							`json:"dispute"`
-	TotalLoss	ClaimDetailsSettlementTotalLoss	`json:"totalLoss"`
-	Payments	[]ClaimDetailsSettlementPayment	`json:"payments"`
-}
-
-//==============================================================================================================================
-//	ClaimDetailsSettlementTotalLoss - Defines the structure for a ClaimDetailsSettlementTotalLoss object.
-//==============================================================================================================================
-type ClaimDetailsSettlementTotalLoss struct {
-	CarValueEstimate	int	`json:"carValueEstimate"`
-	CustomerAgreedValue	int	`json:"customerAgreedValue"`
-}
-
-//==============================================================================================================================
-//	ClaimDetailsSettlementPayment - Defines the structure for a ClaimDetailsSettlementPayment object.
-//==============================================================================================================================
-type ClaimDetailsSettlementPayment struct {
-	RecipientType	string	`json:"recipientType"`
-	Recipient	string		`json:"recipient"`
-	Amount		int			`json:"amount"`
-	Status		string		`json:"status"`
-}
-
-//==============================================================================================================================
-//	ClaimRelations - Defines the structure for a ClaimRelations object.
-//==============================================================================================================================
-type ClaimRelations struct {
-	RelatedPolicy	string	`json:"relatedPolicy"`
 }
 
 //==============================================================================================================================
@@ -195,22 +90,6 @@ const   CURRENT_CLAIM_ID_KEY   =  "currentClaimId"
 //==============================================================================================================================
 const   POLICY_ID_PREFIX      =  "P"
 const   CLAIM_ID_PREFIX   =  "C"
-
-//==============================================================================================================================
-//	 Claim Status types - TODO Flesh these out. TODO Following IBM sample, but should/could these be enums?
-//==============================================================================================================================
-const   STATE_AWAITING_POLICE_REPORT                = "awaiting_police_report"
-const   STATE_AWAITING_GARAGE_REPORT                = "awaiting_garage_report"
-const   STATE_AWAITING_GARAGE_WORK_CONFIRMATION     = "awaiting_garage_work"
-const   STATE_SETTLED  			                    = "settled"
-const	STATUS_OPEN									= "open"
-const	STATUS_CLOSED								= "closed"
-
-//==============================================================================================================================
-//	 Claim Type types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
-//==============================================================================================================================
-const   SINGLE_PARTY                =  "single_party"
-const   MULTIPLE_PARTIES  			=  "multiple_parties"
 
 //==============================================================================================================================
 //	 Settlement Decision types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
@@ -303,8 +182,8 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 //=================================================================================================================================
 //	 newPolicy	-	Constructs a new policy
 //=================================================================================================================================
-func (t *InsuranceChaincode) newPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
-	var policy Policy
+func (t *InsuranceChaincode) newPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (policy.Policy) {
+	var policy policy.Policy
 
 	policy.Id = id
 	policy.Type = "policy"
@@ -331,7 +210,7 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 (RelatedPolicy,Description, Date, IncidentType)")
 	}
 
-	claim := t.newClaim(t.getNextClaimId(stub), args[0], args[1], args[2], args[3])
+	claim := claim.New(t.getNextClaimId(stub), args[0], args[1], args[2], args[3])
 
 	isValid, err := t.checkClaimIsValid(stub, caller, claim);
 
@@ -352,30 +231,10 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 }
 
 //=================================================================================================================================
-//	 newClaim	-	Constructs a new claim
-//=================================================================================================================================
-func (t *InsuranceChaincode) newClaim(id string, relatedPolicy string, description string, incidentDate string, incidentType string) (Claim) {
-
-	var claim Claim
-
-	claim.Id = id
-	claim.Type = "claim"
-
-	claim.Relations.RelatedPolicy = relatedPolicy
-	claim.Details.Description = description
-	claim.Details.Incident.Date = incidentDate
-	claim.Details.Incident.Type = incidentType
-
-	claim.Details.Status = STATUS_OPEN
-
-	return claim
-}
-
-//=================================================================================================================================
 //	 checkClaimIsValid - Performs checks on the claim to ensure it is valid
 //      Returns true if valid, or false and an error if invalid
 //=================================================================================================================================
-func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface, caller string, claim Claim) (bool, error) {
+func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface, caller string, claim claim.Claim) (bool, error) {
 
 	//Check policy exists
 	policy, err := t.retrievePolicy(stub, claim.Relations.RelatedPolicy);
@@ -429,9 +288,9 @@ func (t *InsuranceChaincode) retrieveAllPoliciesJSON(stub shim.ChaincodeStubInte
 //					JSON into the Policy struct for use in the contract. Returns the Policy struct.
 //					Returns empty policy if it errors.
 //==============================================================================================================================
-func (t *InsuranceChaincode) retrievePolicy(stub shim.ChaincodeStubInterface, policyId string) (Policy, error) {
+func (t *InsuranceChaincode) retrievePolicy(stub shim.ChaincodeStubInterface, policyId string) (policy.Policy, error) {
 
-	var policy Policy
+	var policy policy.Policy
 
 	bytes, err := t.retrievePolicyJSON(stub, policyId)
 
@@ -491,9 +350,9 @@ func (t *InsuranceChaincode) retrieveAllClaimsJSON(stub shim.ChaincodeStubInterf
 //					JSON into the Claim struct for use in the contract. Returns the Claim struct.
 //					Returns empty claim if it errors.
 //==============================================================================================================================
-func (t *InsuranceChaincode) retrieveClaim(stub shim.ChaincodeStubInterface, claimId string) (Claim, error) {
+func (t *InsuranceChaincode) retrieveClaim(stub shim.ChaincodeStubInterface, claimId string) (claim.Claim, error) {
 
-	var claim Claim
+	var claim claim.Claim
 
 	bytes, err := t.retrieveClaimJSON(stub, claimId)
 
