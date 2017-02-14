@@ -1,5 +1,11 @@
 package claim
 
+import (
+	"errors"
+	"fmt"
+	"strconv"
+)
+
 //==============================================================================================================================
 //	Claim - Defines the structure for a Claim object.
 //==============================================================================================================================
@@ -106,7 +112,35 @@ func New(id string, relatedPolicy string, description string, incidentDate strin
 	claim.Details.Incident.Date = incidentDate
 	claim.Details.Incident.Type = incidentType
 
-	claim.Details.Status = STATUS_OPEN
+	claim.Details.Status = STATE_AWAITING_GARAGE_REPORT
 
 	return claim
+}
+
+//================================================================================================================================================
+// newGarageReport  create a new Garage Report
+//================================================================================================================================================
+func NewGarageReport(Garage string, EstimateStr string, ActualStr string, WriteOffStr string, Notes string) (ClaimDetailsClaimGarageReport, error) {
+	 
+	var report ClaimDetailsClaimGarageReport
+
+	var Estimate int
+	Estimate, err := strconv.Atoi(EstimateStr)
+	if err != nil {fmt.Printf("\nevaluate Repair Error: invalid value passed for Estimate: %s", err); return report, errors.New("Invalid value passed for Estimate")}
+	
+	var Actual int
+	Actual, err	= strconv.Atoi(ActualStr)
+	if err != nil {fmt.Printf("\nevaluate Repair Error: invalid value passed for Actual: %s", err); return report, errors.New("Invalid value passed for Actual")}
+	
+	var WriteOff bool
+	WriteOff, err = strconv.ParseBool(WriteOffStr)
+	if err != nil {fmt.Printf("\nevaluate Repair Error: invalid value passed for WriteOff: %s", err); return report, errors.New("Invalid value passed for WriteOff")}
+	
+	report.Garage    = Garage
+	report.Estimate	 = Estimate
+	report.Actual	 = Actual
+	report.WriteOff	 = WriteOff
+	report.Notes     = Notes
+	
+	return report, nil
 }
