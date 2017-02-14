@@ -13,7 +13,7 @@ var initialise = function (server) {
     });});
 }
 
-var sendClsimUpdate = function (claimData,roomID){
+var sendClaimUpdate = function (claimData,roomID){
   socketIO.to(roomID).emit('claim update', claimData)
 }
 
