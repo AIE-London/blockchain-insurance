@@ -7,7 +7,13 @@ import (
 	"strconv"
 	"encoding/json"
 	"github.com/hyperledger/fabric/membersrvc/ca"
+	"init_data"
+	"user"
+	"vehicle"
 )
+
+//Used to store all current approved garages
+var allApprovedGarages ApprovedGarages
 
 // InsuranceChaincode example simple Chaincode implementation
 type InsuranceChaincode struct {
@@ -118,49 +124,10 @@ type ClaimRelations struct {
 }
 
 //==============================================================================================================================
-//	Vehicle - Defines the structure for a Vehicle object.
+//	ApprovedGarages - Defines the structure for an ApprovedGarages object.
 //==============================================================================================================================
-type Vehicle struct {
-	Id		string			`json:"id"`
-	Type		string			`json:"type"`
-	Details		VehicleDetails		`json:"details"`
-}
-
-//==============================================================================================================================
-//	VehicleDetails - Defines the structure for a VehicleDetails object.
-//==============================================================================================================================
-type VehicleDetails struct {
-	Make			string		`json:"make"`
-	Model			string		`json:"model"`
-	Registration		string		`json:"registration"`
-	Year			string		`json:"year"`
-	Mileage			int		`json:"mileage"`
-}
-
-//==============================================================================================================================
-//	User - Defines the structure for a User object.
-//==============================================================================================================================
-type User struct {
-	Id		string			`json:"id"`
-	Type		string			`json:"type"`
-	Details		UserDetails		`json:"details"`
-	Relations	UserRelations		`json:"relations"`
-}
-
-//==============================================================================================================================
-//	UserDetails - Defines the structure for a UserDetails object.
-//==============================================================================================================================
-type UserDetails struct {
-	Forename	string		`json:"forename"`
-	Surname		string		`json:"surname"`
-	Email		string		`json:"email"`
-}
-
-//==============================================================================================================================
-//	UserRelations - Defines the structure for a UserRelations object.
-//==============================================================================================================================
-type UserRelations struct {
-	RelatedPolicy	string	`json:"relatedPolicy"`
+type ApprovedGarages struct {
+	Garages		[]string	`json:"garages"`
 }
 
 //==============================================================================================================================
@@ -228,54 +195,14 @@ func main() {
 
 func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
-	//Policy init test data
-	policyArgs1 := []string{"31/01/17", "30/01/18", "300", "BP16BRV"}
-	policyCaller1 := "user_type1_1"
-	policyCallerAffiliation1 := "group1"
-
-	policyId1 := t.getNextPolicyId(stub)
-	t.addPolicy(stub, policyCaller1, policyCallerAffiliation1, policyArgs1)
-
-	policyArgs2 := []string{"11/01/17", "10/01/18", "250", "DZ08TYV"}
-	policyCaller2 := "user_type1_2"
-	policyCallerAffiliation2 := "group1"
-
-	policyId2 := t.getNextPolicyId(stub)
-	t.addPolicy(stub, policyCaller2, policyCallerAffiliation2, policyArgs2)
-
-	//Vehicle init test data
-	vehicleArgs1 := []string{"Ford", "Focus", "BP16BRV", "2016", "7500"}
-	vehicleCaller1 := "vehicle_type1_1"
-	vehicleCallerAffiliation1 := "group1"
-
-	t.addVehicle(stub, vehicleCaller1, vehicleCallerAffiliation1, vehicleArgs1)
-
-	vehicleArgs2 := []string{"Vauxhall", "Corsa", "DZ08TYV", "2008", "33500"}
-	vehicleCaller2 := "vehicle_type1_2"
-	vehicleCallerAffiliation2 := "group1"
-
-	t.addVehicle(stub, vehicleCaller2, vehicleCallerAffiliation2, vehicleArgs2)
-
-	//User init test data
-	userArgs1 := []string{"John", "Hancock", "john.hancock@outlook.com", policyId1}
-	userCaller1 := "user_type1_1"
-	userCallerAffiliation1 := "group1"
-
-	t.addUser(stub, userCaller1, userCallerAffiliation1, userArgs1)
-
-	userArgs2 := []string{"Jane", "Doe", "jane.doe@outlook.com", policyId2}
-	userCaller2 := "user_type1_2"
-	userCallerAffiliation2 := "group1"
-
-	t.addUser(stub, userCaller2, userCallerAffiliation2, userArgs2)
-
-	//add approved garages (new + add methods)
-
 	stub.PutState(CURRENT_POLICY_ID_KEY, []byte("0"))
 	stub.PutState(CURRENT_VEHICLE_ID_KEY, []byte("0"))
 	stub.PutState(CURRENT_USER_ID_KEY, []byte("0"))
 	stub.PutState(CURRENT_CLAIM_ID_KEY, []byte("0"))
-	return nil, nil
+
+	t.initSetup(stub)
+
+	return nil, nil, nil, nil
 }
 
 // Invoke is the entry point to invoke a chaincode function
@@ -378,7 +305,7 @@ func (t *InsuranceChaincode) addVehicle(stub shim.ChaincodeStubInterface, caller
 	}
 
 	mileage, _ := strconv.Atoi(args[4])
-	vehicle := t.newVehicle(t.getNextVehicleId(stub), args[0], args[1], args[2], args[3], mileage)
+	vehicle := vehicle.NewVehicle(t.getNextVehicleId(stub), args[0], args[1], args[2], args[3], mileage)
 
 	bytes, err := json.Marshal(vehicle)
 
@@ -389,24 +316,6 @@ func (t *InsuranceChaincode) addVehicle(stub shim.ChaincodeStubInterface, caller
 	if err != nil { fmt.Printf("addVehicle: Error storing vehicle record: %s", err); return nil, errors.New("Error storing vehicle record") }
 
 	return nil, nil
-}
-
-//=================================================================================================================================
-//	 New Vehicle	-	Constructs a new vehicle
-//=================================================================================================================================
-func (t *InsuranceChaincode) newVehicle(id string, make string, model string, registration string, year string, mileage int) (Vehicle) {
-	var vehicle Vehicle
-
-	vehicle.Id = id
-	vehicle.Type = "vehicle"
-
-	vehicle.Details.Make = make
-	vehicle.Details.Model = model
-	vehicle.Details.Registration = registration
-	vehicle.Details.Year = year
-	vehicle.Details.Mileage = mileage
-
-	return vehicle
 }
 
 //=================================================================================================================================
@@ -421,34 +330,52 @@ func (t *InsuranceChaincode) addUser(stub shim.ChaincodeStubInterface, caller st
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 (Forename, Surname, Email, RelatedPolicy)")
 	}
 
-	user := t.newUser(t.getNextUserId(stub), args[0], args[1], args[2], args[3])
+	user := user.NewUser(t.getNextUserId(stub), args[0], args[1], args[2], args[3])
 
 	bytes, err := json.Marshal(user)
 
-	if err != nil { fmt.Printf("addVehicle Error converting vehicle record: %s", err); return nil, errors.New("Error converting vehicle record") }
+	if err != nil { fmt.Printf("addUser Error converting user record: %s", err); return nil, errors.New("Error converting user record") }
 
 	err = stub.PutState(user.Id, bytes)
 
-	if err != nil { fmt.Printf("addVehicle: Error storing vehicle record: %s", err); return nil, errors.New("Error storing vehicle record") }
+	if err != nil { fmt.Printf("addUser: Error storing user record: %s", err); return nil, errors.New("Error storing user record") }
 
 	return nil, nil
 }
 
 //=================================================================================================================================
-//	 New User	-	Constructs a new user
+//	 appendApprovedGarages		-	Appends approved garages to the list of approved garages in the ledger
 //=================================================================================================================================
-func (t *InsuranceChaincode) newUser(id string, forename string, surname string, email string, relatedPolicy string) (User) {
-	var user User
+func (t *InsuranceChaincode) appendApprovedGarages(stub shim.ChaincodeStubInterface, approvedGarages []string) ([]byte, error){
 
-	user.Id = id
-	user.Type = "user"
+	garages, err := stub.GetState(allApprovedGarages)
 
-	user.Details.Forename = forename
-	user.Details.Surname = surname
-	user.Details.Email = email
-	user.Relations.RelatedPolicy = relatedPolicy
+	if err != nil {
+		return nil, errors.New("Failed to get allApprovedGarages")
+	}
 
-	return user
+	var newGarages = ApprovedGarages{}
+
+	var approvedGaragesList ApprovedGarages
+	json.Unmarshal(garages, &approvedGaragesList)
+
+	newGarages.Garages = approvedGarages
+
+	approvedGaragesList = append(approvedGaragesList, newGarages)
+
+	bytes, err := json.Marshal(approvedGaragesList)
+
+	if err != nil {
+		fmt.Printf("addApprovedGarages: Error converting garages: %s", err); return nil, errors.New("Error converting garages")
+	}
+
+	err = stub.PutState(allApprovedGarages, bytes)
+
+	if err != nil {
+		fmt.Printf("addApprovedGarages: Error adding approved garages: %s", err); return nil, errors.New("Error adding approved garages")
+	}
+
+	return nil, nil
 }
 
 //=================================================================================================================================
@@ -702,6 +629,35 @@ func (t *InsuranceChaincode) getCurrentIdNumber(stub shim.ChaincodeStubInterface
 	currentId, err := strconv.Atoi(string(bytes))
 
 	return currentId;
+}
+
+//==============================================================================================================================
+//	 Init Data Setup
+//==============================================================================================================================
+//
+//==============================================================================================================================
+func (t *InsuranceChaincode)initSetup(stub shim.ChaincodeStubInterface) {
+	//Policy init data
+	policyId1 := t.getNextPolicyId(stub)
+	t.addPolicy(stub, init_data.PolicyCaller1, init_data.PolicyCallerAffiliation1, init_data.PolicyArgs1)
+
+	policyId2 := t.getNextPolicyId(stub)
+	t.addPolicy(stub, init_data.PolicyCaller2, init_data.PolicyCallerAffiliation2, init_data.PolicyArgs2)
+
+	//Vehicle init data
+	t.addVehicle(stub, init_data.VehicleCaller1, init_data.VehicleCallerAffiliation1, init_data.VehicleArgs1)
+
+	t.addVehicle(stub, init_data.VehicleCaller2, init_data.VehicleCallerAffiliation2, init_data.VehicleArgs2)
+
+	//User init data
+	completeUserArgs1 := append(init_data.UserArgs1, policyId1)
+	t.addUser(stub, init_data.UserCaller1, init_data.UserCallerAffiliation1, completeUserArgs1)
+
+	completeUserArgs2 := append(init_data.UserArgs2, policyId2)
+	t.addUser(stub, init_data.UserCaller2, init_data.UserCallerAffiliation2, completeUserArgs2)
+
+	//ApprovedGarages init data
+	t.appendApprovedGarages(stub, init_data.ApprovedGarages)
 }
 
 //==============================================================================================================================
