@@ -14,7 +14,7 @@ var initialise = function (server) {
 }
 
 var sendClaimUpdate = function (claimData,roomID){
-  socketIO.to(roomID).emit('claim update', claimData)
+  socketIO.to(roomID).emit('claimUpdate', claimData)
 }
 
 
