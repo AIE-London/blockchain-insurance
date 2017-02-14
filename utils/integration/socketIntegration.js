@@ -18,3 +18,7 @@ var sendClaimUpdate = function (claimData,roomID){
 }
 
 
+module.exports = {
+  initialise: initialise,
+  sendClaimUpdate: sendClaimUpdate
+};
