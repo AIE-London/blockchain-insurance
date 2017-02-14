@@ -8,15 +8,11 @@ import (
 	"encoding/json"
 	"policy"
 	"claim"
-	"github.com/hyperledger/fabric/membersrvc/ca"
 	"init_data"
 	"user"
 	"vehicle"
 	"approved_garages"
 )
-
-//Used to store all current approved garages
-var allApprovedGarages approved_garages.ApprovedGarages
 
 // InsuranceChaincode example simple Chaincode implementation
 type InsuranceChaincode struct {}
@@ -48,6 +44,9 @@ const	CURRENT_VEHICLE_ID_KEY	= "currentVehicleId"
 const	CURRENT_USER_ID_KEY	= "currentUserId"
 const   CURRENT_CLAIM_ID_KEY	= "currentClaimId"
 
+//Used to store all current approved garages
+const	APPROVED_GARAGES_KEY	= "approvedGarages"
+
 //==============================================================================================================================
 //	 Prefixes for the different domain object type ids
 //==============================================================================================================================
@@ -77,7 +76,7 @@ func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function str
 
 	t.initSetup(stub)
 
-	return nil, nil, nil, nil
+	return nil, nil
 }
 
 // Invoke is the entry point to invoke a chaincode function
@@ -204,7 +203,7 @@ func (t *InsuranceChaincode) addUser(stub shim.ChaincodeStubInterface, caller st
 //=================================================================================================================================
 func (t *InsuranceChaincode) appendApprovedGarages(stub shim.ChaincodeStubInterface, approvedGarages []string) ([]byte, error){
 
-	garages, err := stub.GetState(allApprovedGarages)
+	garages, err := stub.GetState(APPROVED_GARAGES_KEY)
 
 	if err != nil {
 		return nil, errors.New("Failed to get allApprovedGarages")
@@ -217,7 +216,7 @@ func (t *InsuranceChaincode) appendApprovedGarages(stub shim.ChaincodeStubInterf
 
 	newGarages.Garages = approvedGarages
 
-	approvedGaragesList = append(approvedGaragesList, newGarages)
+	approvedGaragesList.Garages = append(approvedGaragesList.Garages, newGarages.Garages...)
 
 	bytes, err := json.Marshal(approvedGaragesList)
 
@@ -225,7 +224,7 @@ func (t *InsuranceChaincode) appendApprovedGarages(stub shim.ChaincodeStubInterf
 		fmt.Printf("addApprovedGarages: Error converting garages: %s", err); return nil, errors.New("Error converting garages")
 	}
 
-	err = stub.PutState(allApprovedGarages, bytes)
+	err = stub.PutState(APPROVED_GARAGES_KEY, bytes)
 
 	if err != nil {
 		fmt.Printf("addApprovedGarages: Error adding approved garages: %s", err); return nil, errors.New("Error adding approved garages")
