@@ -10,10 +10,11 @@ import (
 	"init_data"
 	"user"
 	"vehicle"
+	"approved_garages"
 )
 
 //Used to store all current approved garages
-var allApprovedGarages ApprovedGarages
+var allApprovedGarages approved_garages.ApprovedGarages
 
 // InsuranceChaincode example simple Chaincode implementation
 type InsuranceChaincode struct {
@@ -121,13 +122,6 @@ type ClaimDetailsSettlementPayment struct {
 //==============================================================================================================================
 type ClaimRelations struct {
 	RelatedPolicy	string	`json:"relatedPolicy"`
-}
-
-//==============================================================================================================================
-//	ApprovedGarages - Defines the structure for an ApprovedGarages object.
-//==============================================================================================================================
-type ApprovedGarages struct {
-	Garages		[]string	`json:"garages"`
 }
 
 //==============================================================================================================================
@@ -354,9 +348,9 @@ func (t *InsuranceChaincode) appendApprovedGarages(stub shim.ChaincodeStubInterf
 		return nil, errors.New("Failed to get allApprovedGarages")
 	}
 
-	var newGarages = ApprovedGarages{}
+	var newGarages = approved_garages.ApprovedGarages{}
 
-	var approvedGaragesList ApprovedGarages
+	var approvedGaragesList approved_garages.ApprovedGarages
 	json.Unmarshal(garages, &approvedGaragesList)
 
 	newGarages.Garages = approvedGarages
