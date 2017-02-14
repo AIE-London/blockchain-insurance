@@ -127,7 +127,7 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 	} else if function == "addPoliceReport" {
 		//TODO
 	} else if function == "addGarageReport" {
-		//TODO
+		return t.addGarageReport(stub, caller, caller_affiliation, args)
 	} else if function == "confirmWork" {
 		//TODO
 	}
@@ -473,3 +473,48 @@ func (t *InsuranceChaincode) check_affiliation(stub shim.ChaincodeStubInterface)
 	//return string(affiliation), nil
 	return "dummy-affiliation", nil
 }
+
+//==============================================================================================================================
+//	 addGarageReport - This method adds the garage report's details into the claim
+//   args{claimId, garage, estimated_cost, actual_cost, writeOff, Note}
+//==============================================================================================================================
+func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
+
+	fmt.Println("running addGarageReport()")
+
+	if len(args) != 6 {
+		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 6 (claimId, garage, estimated_cost, actual_cost, writeOff, Note)")
+		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 6 (claimId, garage, estimated_cost, actual_cost, writeOff, Note)")
+	}
+		
+	// Does a claim exist for this vehicle?
+	var theClaim claim.Claim
+	var claimId string = args[0]
+	
+	theClaim, err := t.retrieveClaim(stub , claimId)
+
+	if err != nil {	fmt.Printf("\nADD_GARAGE_REPORT: Failed to retrieve claim Id: %s", err); return nil, errors.New("ADD_GARAGE_REPORT: Error retrieving claim with claimId = " + claimId) }
+		
+	// Is the Claim in a valid state to receive a garage report?
+    if claim.STATE_AWAITING_GARAGE_REPORT != theClaim.Details.Status {
+		fmt.Printf("ADD_GARAGE_REPORT: unexpected Input for claim with Id: %s\n", claimId)
+		return nil, errors.New("ADD_GARAGE_REPORT: unexpected Input for claim with claimId = " + claimId)
+	}
+	
+	var report claim.ClaimDetailsClaimGarageReport
+	report, err = claim.NewGarageReport(args[1], args[2], args[3], args[4], args[5])
+
+	theClaim.Details.Repair = report
+	theClaim.Details.Status = claim.STATE_AWAITING_GARAGE_WORK_CONFIRMATION
+	
+	bytes, err := json.Marshal(theClaim)
+	if err != nil { fmt.Printf("\nADD_GARAGE_REPORT Error converting Claim details: %s", err); return nil, errors.New("Error converting Claim details") }
+	
+	fmt.Printf("About to update claim %s \n", claimId)
+	err = stub.PutState(theClaim.Id, bytes)
+	if err != nil { fmt.Printf("\nADD_GARAGE_REPORT: Error adding garage Report: %s", err); return nil, errors.New("Error adding garage Report") }
+	
+	return nil, nil
+}
+
+
