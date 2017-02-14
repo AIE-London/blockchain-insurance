@@ -48,7 +48,7 @@ module.exports = {
   middleware: function (req, response, next) {
     var header = "";
     var origin = req.headers.origin;
-    if((origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')){
+    if((req.method.toUpperCase() === 'OPTIONS') || (origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')){
       next();
     }
     else{
