@@ -135,7 +135,7 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 	}
 
 	excess, _ := strconv.Atoi(args[2])
-	policy := t.newPolicy(t.getNextPolicyId(stub), caller, args[0], args[1], excess, args[3])
+	policy := policy.New(t.getNextPolicyId(stub), caller, args[0], args[1], excess, args[3])
 
 	bytes, err := json.Marshal(policy)
 
@@ -146,25 +146,6 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 	if err != nil { fmt.Printf("addPolicy: Error storing policy record: %s", err); return nil, errors.New("Error storing policy record") }
 
 	return nil, nil
-}
-
-//=================================================================================================================================
-//	 newPolicy	-	Constructs a new policy
-//=================================================================================================================================
-func (t *InsuranceChaincode) newPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (policy.Policy) {
-	var policy policy.Policy
-
-	policy.Id = id
-	policy.Type = "policy"
-
-	policy.Details.StartDate = startDate
-	policy.Details.EndDate = endDate
-	policy.Details.Excess = excess
-
-	policy.Relations.Owner = owner
-	policy.Relations.Vehicle = vehicleReg
-
-	return policy
 }
 
 //=================================================================================================================================
