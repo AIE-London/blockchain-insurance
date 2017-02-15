@@ -550,15 +550,15 @@ func (t *InsuranceChaincode) check_affiliation(stub shim.ChaincodeStubInterface)
 
 //==============================================================================================================================
 //	 addGarageReport - This method adds the garage report's details into the claim
-//   args{claimId, garage, estimated_cost, actual_cost, writeOff, Note}
+//   args{claimId, garage, estimated_cost,  writeOff, Note}
 //==============================================================================================================================
 func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running addGarageReport()")
 
-	if len(args) != 6 {
-		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 6 (claimId, garage, estimated_cost, actual_cost, writeOff, Note)")
-		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 6 (claimId, garage, estimated_cost, actual_cost, writeOff, Note)")
+	if len(args) != 5 {
+		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 6 (claimId, garage, estimated_cost, writeOff, Note)")
+		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 6 (claimId, garage, estimated_cost, writeOff, Note)")
 	}
 		
 	// Does a claim exist for this vehicle?
@@ -576,19 +576,83 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  
 	}
 	
 	var report claim.ClaimDetailsClaimGarageReport
-	report, err = claim.NewGarageReport(args[1], args[2], args[3], args[4], args[5])
+	report, err = claim.NewGarageReport(args[1], args[2], args[3], args[4])
 
 	theClaim.Details.Repair = report
-	theClaim.Details.Status = claim.STATE_AWAITING_GARAGE_WORK_CONFIRMATION
-	
-	bytes, err := json.Marshal(theClaim)
-	if err != nil { fmt.Printf("\nADD_GARAGE_REPORT Error converting Claim details: %s", err); return nil, errors.New("Error converting Claim details") }
-	
-	fmt.Printf("About to update claim %s \n", claimId)
-	err = stub.PutState(theClaim.Id, bytes)
-	if err != nil { fmt.Printf("\nADD_GARAGE_REPORT: Error adding garage Report: %s", err); return nil, errors.New("Error adding garage Report") }
+
+	theClaim.Details.Status = claim.STATE_PENDING_AFTER_REPORT_DECISION
+
+	t.saveClaim(stub, theClaim)	
+
+	t.afterReportProcess(stub, caller, caller_affiliation, args)
 	
 	return nil, nil
 }
 
+//=========================================================================================
+// This Function process the claim after a report has arrived
+//=========================================================================================
+func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
+	fmt.Println("running afterReportProcess()")
+    var theClaim claim.Claim
+	var claimId string = args[0]	
+	
+	theClaim, err := t.retrieveClaim(stub , claimId)
+	
+	if err != nil {	fmt.Printf("\nAFTER_REPORT_PROCESS: Failed to retrieve claim Id: %s", err); return nil, errors.New("AFTER_REPORT_PROCESS: Error retrieving claim with claimId = " + claimId) }
+	
+	if theClaim.Details.Status == claim.STATE_PENDING_AFTER_REPORT_DECISION{
+
+		if theClaim.Details.Repair.WriteOff || theClaim.Details.Repair.Estimate > (t.getCarValue() * 50 / 100) {
+			//process total_loss
+			t.processTotalLoss(stub, theClaim)
+		}else{
+			theClaim.Details.Status = claim.STATE_ORDER_GARAGE_WORK
+			t.saveClaim(stub, theClaim)
+		}
+	}
+		
+	return nil, nil
+}
+
+//=========================================================================================
+//
+//=========================================================================================
+func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface,  theClaim claim.Claim) ([]byte, error) {
+
+	fmt.Println("running processTotalLoss()")
+    if &theClaim != nil{
+		var settlement claim.ClaimDetailsSettlement
+		settlement.Decision = claim.TOTAL_LOSS
+		settlement.Dispute = false
+		theClaim.Details.Settlement = settlement
+		theClaim.Details.Status = claim.STATE_TOTAL_LOSS_ESTABLISHED
+		t.saveClaim(stub, theClaim)
+	}else {fmt.Printf("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim\n"); return nil, errors.New("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim") }
+	return nil, nil
+}
+
+//===============================================================================
+// This method saves the claim after updates
+//===============================================================================
+func (t *InsuranceChaincode) saveClaim(stub shim.ChaincodeStubInterface, theClaim  claim.Claim) (bool, error) {
+
+	bytes, err := json.Marshal(theClaim)
+	if err != nil { fmt.Printf("\nSAVE_CLAIM Error converting Claim details: %s", err); return false, errors.New("Error converting Claim details") }
+	
+	fmt.Printf("About to update claim %s \n", theClaim.Id)
+	err = stub.PutState(theClaim.Id, bytes)
+	if err != nil { fmt.Printf("\nSAVE_CLAIM: Error adding garage Report: %s", err); return false, errors.New("Error storing claim details") }
+	
+	return true, nil
+}
+
+//===============================================================================
+//  Temporary function to return a hardcoded value of the car after the fix
+//  Basicaly, this will call he insurer core API to get the Car value
+//===============================================================================
+func (t *InsuranceChaincode) getCarValue() (int) {
+
+	return 3000;
+}
 
