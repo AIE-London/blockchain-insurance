@@ -14,6 +14,8 @@ var routingHelperFunctions = require('./utils/helpers/routing');
 
 var blockchainSetup = require('./utils/blockchain/setup');
 
+var vehicleValuationService = require('./utils/vehicle/valuationService')
+
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
 
@@ -213,6 +215,63 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
   response.setHeader('Content-Type', 'application/json');
   response.write(JSON.stringify(responseBody));
   response.end();
+  return;
+
+});
+
+/**
+ * @swagger
+ * /component/vehicle/{styleId}/value:
+ *   get:
+ *     tags:
+ *       - blockchain-insurance-node-components
+ *     description: Obtain an estimated vehicle value based on an Edmunds Api style id
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - styleId: styleId
+ *         description: the edmunds api style id of the vehicle
+ *         in: path
+ *         type: string
+ *         required: true
+ *       - mileage: mileage
+ *         description: the mileage of the vehicle
+ *         in: query TODO???
+ *         type: string
+ *         required: true
+ *       - requestId: requestId
+ *         description: requests with the same requestId will always return the same result
+ *         in: query TODO???
+ *         type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Successful ???
+ */
+app.get('/' + apiPath.base + '/vehicle/:styleId/value', function(request, response){
+  var responseBody = {};
+
+  var mileage = request.query.mileage;
+  var requestId = request.query.requestId;
+  var styleId = request.params.styleId;
+
+  vehicleValuationService.getVehicleValuation(styleId, mileage, function(carValue) {
+    if(carValue) {
+      response.setHeader('Content-Type', 'application/json');
+      responseBody.value = carValue;
+      response.write(JSON.stringify(responseBody));
+      response.end();
+      return;
+    } else{
+      responseBody.reason = "Could not retrieve car value";
+      response.setHeader('Content-Type', 'application/json');
+      response.statusCode = 500;
+      response.write(JSON.stringify(responseBody));
+      response.end();
+      return;
+    }
+  });
+
   return;
 
 });
