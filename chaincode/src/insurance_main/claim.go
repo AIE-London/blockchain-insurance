@@ -1,4 +1,4 @@
-package claim
+package main
 
 import (
 	"errors"
@@ -41,7 +41,6 @@ type ClaimDetailsIncident struct {
 type ClaimDetailsClaimGarageReport struct {
 	Garage		string	`json:"garage"`
 	Estimate	int		`json:"estimate"`
-	Actual		int		`json:"actual"`
 	WriteOff	bool	`json:"writeOff"`
 	Notes		string	`json:"notes"`
 }
@@ -86,7 +85,11 @@ type ClaimRelations struct {
 //==============================================================================================================================
 const   STATE_AWAITING_POLICE_REPORT                = "awaiting_police_report"
 const   STATE_AWAITING_GARAGE_REPORT                = "awaiting_garage_report"
+const   STATE_PENDING_AFTER_REPORT_DECISION         = "pending_decision"
+const   STATE_TOTAL_LOSS_ESTABLISHED                = "total_loss_established"
+const   STATE_ORDER_GARAGE_WORK                     = "awaiting_garage_work"
 const   STATE_AWAITING_GARAGE_WORK_CONFIRMATION     = "awaiting_garage_work"
+const   STATE_AWAITING_CLAIMANT_CONFIRMATION        = "awaiting_claimant_confirmation"
 const   STATE_SETTLED  			                    = "settled"
 const	STATUS_OPEN									= "open"
 const	STATUS_CLOSED								= "closed"
@@ -97,10 +100,17 @@ const	STATUS_CLOSED								= "closed"
 const   SINGLE_PARTY                =  "single_party"
 const   MULTIPLE_PARTIES  			=  "multiple_parties"
 
+//==============================================================================================================================
+//	 Decision types - 
+//==============================================================================================================================
+const   TOTAL_LOSS          =  "total_loss"
+const   LIABILITY  			=  "liability"
+const   NOT_AT_FAULT        =  "not_at_fault"
+
 //=================================================================================================================================
 //	 newClaim	-	Constructs a new claim
 //=================================================================================================================================
-func New(id string, relatedPolicy string, description string, incidentDate string, incidentType string) (Claim) {
+func NewClaim(id string, relatedPolicy string, description string, incidentDate string, incidentType string) (Claim) {
 
 	var claim Claim
 
@@ -120,25 +130,20 @@ func New(id string, relatedPolicy string, description string, incidentDate strin
 //================================================================================================================================================
 // newGarageReport  create a new Garage Report
 //================================================================================================================================================
-func NewGarageReport(Garage string, EstimateStr string, ActualStr string, WriteOffStr string, Notes string) (ClaimDetailsClaimGarageReport, error) {
+func NewGarageReport(Garage string, EstimateStr string,  WriteOffStr string, Notes string) (ClaimDetailsClaimGarageReport, error) {
 	 
 	var report ClaimDetailsClaimGarageReport
 
 	var Estimate int
 	Estimate, err := strconv.Atoi(EstimateStr)
-	if err != nil {fmt.Printf("\nevaluate Repair Error: invalid value passed for Estimate: %s", err); return report, errors.New("Invalid value passed for Estimate")}
-	
-	var Actual int
-	Actual, err	= strconv.Atoi(ActualStr)
-	if err != nil {fmt.Printf("\nevaluate Repair Error: invalid value passed for Actual: %s", err); return report, errors.New("Invalid value passed for Actual")}
+	if err != nil {fmt.Printf("\nNewGarageReport Error: invalid value passed for Estimate: %s", err); return report, errors.New("Invalid value passed for Estimate")}
 	
 	var WriteOff bool
 	WriteOff, err = strconv.ParseBool(WriteOffStr)
-	if err != nil {fmt.Printf("\nevaluate Repair Error: invalid value passed for WriteOff: %s", err); return report, errors.New("Invalid value passed for WriteOff")}
+	if err != nil {fmt.Printf("\nNewGarageReport Error: invalid value passed for WriteOff: %s", err); return report, errors.New("Invalid value passed for WriteOff")}
 	
 	report.Garage    = Garage
 	report.Estimate	 = Estimate
-	report.Actual	 = Actual
 	report.WriteOff	 = WriteOff
 	report.Notes     = Notes
 	
