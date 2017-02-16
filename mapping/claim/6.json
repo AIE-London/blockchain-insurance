@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/claim/6"
+  },
+  "response": {
+    "status": 500,
+    "jsonBody": {
+      "reason": "Server error",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}
