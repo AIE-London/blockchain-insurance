@@ -84,7 +84,7 @@ app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io
 app.use(auth.allowOriginsMiddleware);
 
 
-socketIntegration.initialise(8080);
+socketIntegration.initialise(8000);
 
 // Development Only
 if ('development' == app.get('env')) {
