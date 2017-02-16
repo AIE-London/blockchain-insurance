@@ -34,6 +34,7 @@ var validate = require('express-jsonschema').validate;
 // [TODO] Add or modify generated schemas to create custom validation
 var schemas = {};
 schemas.authSchema = require("./config/schemas/authSchema.json");
+schemas.postClaimSchema = require("./config/schemas/postClaimSchema.json");
 
 /**
  * Swagger Configuration
@@ -56,7 +57,7 @@ var swaggerSpec = swaggerJSDoc(options);
 
 // Re-use validation-schemas for swagger, but delete unneeded attributes
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/authSchema.json"), "authSchema");
-
+swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postClaimSchema.json"), "postClaimSchema");
 
 /**
  * Environment Configuration
@@ -159,7 +160,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
 
 /**
  * @swagger
- * /component/test:
+ * /component/test/{username}:
  *   get:
  *     tags:
  *       - blockchain-insurance-node-components
@@ -186,6 +187,39 @@ app.get('/' + apiPath.base + '/test/:username', function(request, response){
 	response.write(JSON.stringify(responseBody));
 	response.end();
 	return;
+});
+
+/**
+ * @swagger
+ * /claimant/{username}/claim:
+ *   post:
+ *     tags:
+ *       - blockchain-insurance-node-components
+ *     description: Is a test endpoint
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username
+ *         in: path
+ *         type: string
+ *         required: true,
+ *         schema:
+ *           $ref: '/definitions/postClaimSchema'
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema}), function(request, response){
+
+  // TODO: Interact with blockchain to add new claim
+
+  var responseBody = {};
+  responseBody.message = "Endpoint hit successfully";
+  response.setHeader('Content-Type', 'application/json');
+  response.write(JSON.stringify(responseBody));
+  response.end();
+  return;
 
 });
 

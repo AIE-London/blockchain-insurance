@@ -48,7 +48,7 @@ module.exports = {
   middleware: function (req, response, next) {
     var header = "";
     var origin = req.headers.origin;
-    if((origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')){
+    if((req.method.toUpperCase() === 'OPTIONS') || (origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')){
       next();
     }
     else{
@@ -80,7 +80,8 @@ module.exports = {
     var allowedOrigins = config.allowedOrigins;
     var origin = req.headers.origin;
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,authorization');
+    res.setHeader('Access-Control-Expose-Headers', 'Token');
 
     if(allowedOrigins.indexOf(origin) > -1){
       res.setHeader('Access-Control-Allow-Origin', origin);
