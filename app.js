@@ -7,6 +7,10 @@ var userService = require('./utils/integration/userService');
 
 var auth = require('./utils/integration/authService');
 
+var socketIntegration = require('./utils/integration/socketIntegration');
+
+
+
 // Helper Functions
 var arrayHelperFunctions = require('./utils/helpers/array');
 var objectHelperFunctions = require('./utils/helpers/object');
@@ -75,10 +79,12 @@ app.engine('html', require('ejs').renderFile);
 app.use(logger('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
 app.use('/style', express.static(path.join(__dirname, '/views/style')));
-app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json"], auth.middleware));
+app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/"], auth.middleware));
 app.use(auth.allowOriginsMiddleware);
+
+
+socketIntegration.initialise(8080);
 
 // Development Only
 if ('development' == app.get('env')) {
