@@ -1,4 +1,4 @@
-package policy
+package main
 
 //==============================================================================================================================
 //	Policy - Defines the structure for a policy object. JSON on right tells it what JSON fields to map to
@@ -35,7 +35,7 @@ type PolicyRelations struct {
 //=================================================================================================================================
 //	 newPolicy	-	Constructs a new policy
 //=================================================================================================================================
-func New(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
+func NewPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
 	var policy Policy
 
 	policy.Id = id
