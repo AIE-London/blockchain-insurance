@@ -39,3 +39,7 @@ jspm_packages
 # Custom
 .idea
 config/credentials/ibm_blockchain_credentials.json
+
+# The build Packages
+chaincode/pkg
+chaincode/src/insurance_main/insurance_main*
