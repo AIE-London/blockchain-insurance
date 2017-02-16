@@ -15,6 +15,39 @@
       }
     }
   },
+  "blockchain": {
+    "chainName":"claimant-chain",
+    "chaincodeId": "268cc891fa554aae7cdfd10158f08e789299dcad8822aed3b5fa1db1de53c82c",
+    "deployWaitTime":"60",
+    "user": {
+      "username": "JohnDoe",
+      "affiliation" : "group1"
+    },
+    "deployRequest":{
+      "chaincodePath":"chaincode/src",
+      "functionName":"init",
+      "args":[
+        "a",
+        "100",
+        "b",
+        "200"
+      ]
+    },
+    "invokeRequest":{
+      "functionName":"invoke",
+      "args":[
+        "a",
+        "b",
+        "10"
+      ]
+    },
+    "queryRequest":{
+      "functionName":"query",
+      "args":[
+        "a"
+      ]
+    }
+  },
   "swagger": {
     "info": {
       "title": "Node Example Swagger API",

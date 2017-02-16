@@ -1,214 +1,185 @@
-// Import version to dynamically grab latest chaincode
-var version =  require('config').app.version;
-var fullVersion = version.major + "." + version.minor + "." + version.bug;
+process.env.GOPATH = __dirname;
 
-// Import SDK
-var Ibc1 = require('ibm-blockchain-js');
-var ibc = new Ibc1();
+var config = require('config');
+var hfc = require('hfc');
 
-// peers and users
-var peers = [];
-var users = [];
+/** CERTIFICATES **/
 
-// Options for loading SDK
-var options = {};
-
-// helper functions
 /**
- * Checks if the peer wants tls or not
- * @param peer_array
- * @returns {boolean}
+ * Certificate Authority URL
+ * @type {string}
  */
-var detect_tls_or_not = function(peer_array){
-  var tls = false;
-  if(peer_array[0] && peer_array[0].api_port_tls){
-    if(!isNaN(peer_array[0].api_port_tls)) tls = true;
-  }
-  return tls;
+var caUrl;
+
+/**
+ * Path of the certificate.pem
+ * @type {string}
+ */
+var certPath = __dirname + "/src/" + config.blockchain.deployRequest.chaincodePath + "/certificate.pem";
+
+/**
+ * File Name of the Certificate
+ * @type {string}
+ */
+var certFileName = 'us.blockchain.ibm.com.cert';
+
+/** CHAINCODE **/
+
+/**
+ * Id of the deployed chaincode
+ * @type {string}
+ */
+var chaincodeId = config.blockchain.chaincodeId;
+
+/**
+ * Path of the deployed chaincode
+ * @type {string}
+ */
+var chaincodePath = __dirname + "/" + chaincodeId + "/";
+
+/** NETWORK **/
+var network = {};
+
+/** FUNCTIONS **/
+
+/**
+ * @sets {chain, network}
+ */
+var configureNetworkChain = function(){
+
+  // Set Chain
+  chain = hfc.newChain(config.chainName);
+
+  //[TODO] VCAP CREDENTIALS
+
+  // Set Network
+  network.credentials = require("../../config/credentials/ServiceCredentials.json");
+
 };
 
-//loop here, check if chaincode is up and running or not
-var check_if_deployed = function(e, attempt){
-  if(e){
-    console.log("In check_if_deployed, error");
-    console.log(e);
-    //cb_deployed(e);																		//looks like an error pass it along
-  }
-  else if(attempt >= 15){																	//tried many times, lets give up and pass an err msg
-    console.log('[preflight check]', attempt, ': failed too many times, giving up');
-    var msg = 'chaincode is taking an unusually long time to start. this sounds like a network error, check peer logs';
-    if(!process.error) process.error = {type: 'deploy', msg: msg};
-    //cb_deployed(msg);
-  }
-  else{
-    console.log('[preflight check]', attempt, ': testing if chaincode is ready');
-    chaincode.query.read(['_authorisedGarages'], function(err, resp){
-      var cc_deployed = false;
-      try{
-        if(err == null){															//no errors is good, but can't trust that alone
-          if(resp === 'null') cc_deployed = false; // If the chaincode is deployed and Init ran, this node should not be null
-          else{
-            var json = JSON.parse(resp);
-            if(json.length > 0) cc_deployed = true; // We should have at least one authorised garage
-          }
-        }
-      }
-      catch(e){}																		//anything nasty goes here
+/**
+ * @sets {caURL, certFile, chain.keyValStore, chain.MemberServicesUrl}
+ * @configures {keyValueStore, memberServicesUrl}
+ */
+var setupCertificates = function(){
 
-      // ---- Are We Ready? ---- //
-      if(!cc_deployed){
-        console.log('[preflight check]', attempt, ': failed, trying again');
-        setTimeout(function(){
-          check_if_deployed(null, ++attempt);										//no, try again later
-        }, 10000);
-      }
-      else{
-        console.log('[preflight check]', attempt, ': success');
-        //cb_deployed(null);															//yes, lets go!
-      }
+  /**
+   * Determining if we are running on a startup or HSBN (High Security Business Network)
+   * based on the url of the discovery host name.  The HSBN will contain the string zone.
+   * @type {boolean}
+   */
+  var isHSBN = peers[0].discovery_host.indexOf('secure') >= 0 ? true : false;
+
+  /**
+   * The network ID is an attribute within credentials under ca.
+   * We only expect there to be one so take the first
+   */
+  var network_id = Object.keys(network.ca)[0];
+
+  /**
+   * Generateing the URL for the Certificate Authority
+   * @type {string}
+   */
+  caUrl = "grpcs://" + network.ca[network_id].discovery_host + ":" + network.ca[network_id].discovery_port;
+
+  /**
+   * Configure the KeyValStore which is used to store sensitive keys.
+   * This data needs to be located or accessible any time the users enrollmentID
+   * perform any functions on the blockchain.  The users are not usable without
+   * This data.
+   **/
+
+    // uuid is always first 8 characters
+  var uuid = network_id.substring(0, 8);
+  chain.setKeyValStore(hfc.newFileKeyValStore(__dirname + '/keyValStore-' + uuid));
+
+  /**
+   * if it's a High Security Business Network (HSBN),
+   * overwrite the certFile path.
+   */
+  if (isHSBN){
+    certFileName = '0.secure.blockchain.ibm.com.cert';
+  }
+
+  /**
+   * Reads in the relevant certificate and adds it to the chaincode directory
+   */
+  fs.createReadStream(certFileName).pipe(fs.createWriteStream(certPath));
+  var cert = fs.readFileSync(certFileName);
+
+  /**
+   * sets the chain's mmeber service url
+   */
+  chain.setMemberServicesUrl(caUrl, {
+    pem: cert
+  });
+
+};
+
+/**
+ * Function to enroll a user from the network credentials (i.e. user[0] for admin)
+ * @param user
+ */
+var enrollNetworkUser = function(user){
+  return new Promise(function(resolve, reject){
+    chain.enroll(user.enrollId, user.enrollSecret, function(err, networkUser){
+      if (err) throw Error ("\nError: failed to enroll network user " + user.enrollId + ": " + err);
+      resolve(networkUser);
+    })
+  });
+
+};
+
+/**
+ * Enrolls and Sets a Given Network User as the Registrar
+ * which is authorised to register other users
+ * Generally the Admin user (user[0])
+ * @param registeredUser
+ */
+var configureRegistrar = function(registeredUser){
+  chain.setRegistrar(registrarUser);
+};
+
+var setupNetwork = function(){
+
+  configureNetworkChain();
+  setupCertificates();
+
+    return enrollNetworkUser(config.blockchain.users[0])
+    .then(configureRegistrar)
+    .catch(function(error){
+      console.error(error);
     });
-  }
-}
 
-
-//Chaincode
-var chaincode = {
-  zip_url: "https://github.com/Capgemini-AIE/blockchain-insurance/archive/" + fullVersion + ".zip",
-  unzip_dir: "blockchain-insurance-" + fullVersion + "/chaincode/src/insurance_code/",
-  git_url: "http://gopkg.in/Capgemini-AIE/blockchain-insurance.v" + version.major +"/chaincode"
 };
 
-var loadCredentials = function(){
-
-  console.log("--- Loading Credentials ---");
-  if(process.env.VCAP_SERVICES){
-
-    console.log("--- VCAP EXISTS ---");
-
-    var servicesObject = JSON.parse(process.env.VCAP_SERVICES);
-    for (var i in servicesObject){
-
-      console.log("--- I ---");
-      console.log(i);
-
-      if(i.indexOf('ibm-blockchain') >= 0){													//looks close enough
-        console.log("Found ibm-blockchain");
-        if(servicesObject[i][0].credentials.error){
-          console.log('!\n!\n! Error from Bluemix: \n', servicesObject[i][0].credentials.error, '!\n!\n');
-          peers = null;
-          users = null;
-          process.error = {type: 'network', msg: 'Due to overwhelming demand the IBM Blockchain Network service is at maximum capacity.  Please try recreating this service at a later date.'};
-        }
-        if(servicesObject[i][0].credentials && servicesObject[i][0].credentials.peers){		//found the blob, copy it to 'peers'
-          console.log('overwritting peers, loading from a vcap service: ', i);
-          peers = servicesObject[i][0].credentials.peers;
-          if(servicesObject[i][0].credentials.users){										//user field may or maynot exist, depends on if there is membership services or not for the network
-            console.log('overwritting users, loading from a vcap service: ', i);
-            users = servicesObject[i][0].credentials.users;
-          }
-          else users = null;																//no security
-          break;
-        }
-      }
-    }
-  } else {
-
-    var manual = {};
-
-    var cloudCredentials = false;
-
-    try{
-      require.resolve('../../config/credentials/ibm_blockchain_credentials.json');
-      console.log("Using IBM Blockchain Credentials")
-      cloudCredentials = true;
-    } catch (e){
-      console.log("Using Docker Credentials");
-      cloudCredentials = false;
-    }
-
-    if (cloudCredentials){
-      console.log("-----ibm-----");
-      manual = require('../../config/credentials/ibm_blockchain_credentials.json');
-    } else {
-      console.log("-----docker-----");
-      manual = require('../../config/credentials/mycreds_docker_compose.json');
-    }
-
-
-
-    if (manual) {
-      if (manual.credentials.peers) {
-        peers = manual.credentials.peers;
-      }
-      if (manual.credentials.users) {
-        users = manual.credentials.users;
-      }
-
-      peers = manual.credentials.peers;
-      users = manual.credentials.users;
-    } else {
-      console.error("You do not have a local copy of ibm_blockchain_credentials, please ask an admin for this file");
-    }
-  }
-};
-
-var setOptions = function(){
-  options = {
-    network:{
-      peers: [peers[0]],
-      users: [users[0]],
-      options: {
-        quiet: true,
-        tls: detect_tls_or_not(peers),
-        maxRetry: 1
-      }
-    },
-    chaincode: chaincode
+/**
+ * Enrolls a new user using provider (non-network user)
+ * @param username
+ * @param affiliation
+ * @param callback
+ */
+var enrollNewUser = function(username, affiliation, callback){
+  var registrationRequest = {
+    enrolmentID: username,
+    affiliation: affiliation
   };
+  return new Promise(function(){
+    chain.registerAndEnroll(registrationRequest, function(err, user){
+
+      // Throw an error if user couldn't be registered
+      if (err) throw Error("Failed to register and enroll " + username + ": " + err );
+
+      /**
+       * Returns the user so that actions can be performed against them
+       */
+      resolve(user);
+    });
+  })
 };
 
-var sdkLoaded = function(err, cc){
-
-  if (err || !cc) {
-    console.log("There was an error loading the chaincode / network");
-    console.error(err);
-  } else {
-    console.log("There was no error loading the chaincode / network");
-    chaincode = cc;
-
-    // ---- To Deploy or Not to Deploy ---- //
-    if(!cc.details.deployed_name || cc.details.deployed_name === ''){
-      cc.deploy('init', ['99'], {delay_ms: 30000}, function(e){ 						// delay_ms is milliseconds to wait after deploy for conatiner to start, 50sec recommended
-        check_if_deployed(e, 1);
-      });
-    } else {
-      console.log('chaincode summary file indicates chaincode has been previously deployed');
-      check_if_deployed(null, 1);
-    }
-  }
-};
-
-var loadSDK = function(){
-  if(process.env.VCAP_SERVICES){
-    console.log('\n[!] looks like you are in bluemix, I am going to clear out the deploy_name so that it deploys new cc.\n[!] hope that is ok budddy\n');
-    options.chaincode.deployed_name = '';
-  };
-
-  if (options.chaincode) {
-
-    console.log("--- Options ---");
-    console.log(options);
-
-    ibc.load(options, sdkLoaded);
-  } else {
-    console.error("Didn't try load SDK because there is no valid chaincode");
-  }
-};
 
 module.exports = {
-  setup: function(){
-    loadCredentials();
-    setOptions();
-    loadSDK();
-  }
+  setupNetwork: setupNetwork,
+  enrollNewUser: enrollNetworkUser
 };
