@@ -110,7 +110,7 @@ EDMUNDS_API_KEY
 
 2) Deploy the chain code with an init argument specifying the host address of the oracle service (including port)
 
-3) Run app.js node app
+3) Run the app.js node app
 
 ```
 npm install
