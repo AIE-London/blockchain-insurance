@@ -38,6 +38,7 @@ var loginAndInvoke = function(functionName, args, callback) {
       chain.getUser("jim", function (err, userViaGet) {
         if (err) {
           console.error(err);
+          callback(err);
           return;
         }
         invoke(functionName, args, userViaGet, callback);

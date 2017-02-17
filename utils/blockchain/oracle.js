@@ -13,6 +13,9 @@ var getVechicleValuationAndCallbackToChain = function(requestId, styleId, mileag
       console.log("Received value: " + vehicleValue);
       callbackVehicleValuationToChaincode(requestId, callbackFunction, parseInt(vehicleValue), callback);
     });
+  } else {
+    //Already requested by different peer, so just callback straight away
+    callback();
   }
 };
 
