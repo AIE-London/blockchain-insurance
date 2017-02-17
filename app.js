@@ -242,16 +242,21 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  *         required: true
  *       - mileage: mileage
  *         description: the mileage of the vehicle
- *         in: query TODO???
+ *         in: query
  *         type: string
  *         required: true
  *       - requestId: requestId
  *         description: requests with the same requestId will always return the same result
- *         in: query TODO???
+ *         in: query
+ *         type: string
+ *         required: true
+ *       - callbackFunctionName: callbackFunctionName
+ *         description: the name of the chaincode function that should be invoked when a value has been obtained
+ *         in: query
  *         type: string
  *         required: true
  *     responses:
- *       200:
+ *       202:
  *         description: Successful ???
  */
 app.get('/' + apiPath.base + '/oracle/vehicle/:styleId/value', function(request, response){
@@ -265,6 +270,7 @@ app.get('/' + apiPath.base + '/oracle/vehicle/:styleId/value', function(request,
   oracle.requestVehicleValuation(requestId, styleId, mileage, callbackFunctionName, function() {
     response.setHeader('Content-Type', 'application/json');
     response.write(JSON.stringify(responseBody));
+    response.statusCode = 202;
     response.end();
     return;
   });
