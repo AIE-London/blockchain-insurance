@@ -1,4 +1,4 @@
-package vehicle
+package main
 
 //==============================================================================================================================
 //	Vehicle - Defines the structure for a Vehicle object.

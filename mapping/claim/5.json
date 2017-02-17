@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/claim/1234"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
+

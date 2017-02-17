@@ -45,3 +45,7 @@ ServiceCredentials.json
 Scripts/
 certificate.pem
 keyValStore-*
+
+# The build Packages
+chaincode/pkg
+chaincode/src/insurance_main/insurance_main*
