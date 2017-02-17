@@ -16,7 +16,7 @@
     }
   },
   "blockchain": {
-    "chainName":"claimant-chain",
+    "chainName":"insurance-chain",
     "chaincodeId": "268cc891fa554aae7cdfd10158f08e789299dcad8822aed3b5fa1db1de53c82c",
     "deployWaitTime":"60",
     "user": {

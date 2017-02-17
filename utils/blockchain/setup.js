@@ -166,9 +166,10 @@ var setupNetwork = function(){
     return enrollNetworkUser(network.credentials.users[0])
     .then(configureRegistrar)
     .catch(function(error){
-      console.error(error);
+      throw new Error("Failed to setup network: " + error)
     }).then(function(){
         console.log("Completed Network Setup");
+        resolve();
     });
 
 
@@ -202,5 +203,5 @@ var enrollNewUser = function(username, affiliation, callback){
 
 module.exports = {
   setupNetwork: setupNetwork,
-  enrollNewUser: enrollNetworkUser
+  enrollNewUser: enrollNewUser
 };

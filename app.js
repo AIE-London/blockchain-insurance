@@ -13,6 +13,8 @@ var objectHelperFunctions = require('./utils/helpers/object');
 var routingHelperFunctions = require('./utils/helpers/routing');
 
 var blockchainSetup = require('./utils/blockchain/setup');
+var blockchainInvoke = require('./utils/blockchain/invoker');
+
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
@@ -174,7 +176,14 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
 app.get('/' + apiPath.base + '/test/:username', function(request, response){
 	var responseBody = {};
 
-  blockchainSetup.setup();
+  blockchainSetup.setupNetwork()
+    .then(function(){
+      return blockchainSetup.enrollNewUser("ScottAllen", "Claimants")
+    })
+    .then(function(user){
+      blockchainInvoke.invoke()
+    });
+
 
 	responseBody.message = "Endpoint hit successfully";
 	response.setHeader('Content-Type', 'application/json');
