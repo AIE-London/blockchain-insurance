@@ -20,7 +20,7 @@ var express = require('express'), http = require('http'), path = require('path')
 // Create Server
 var app = express();
 
-blockchainSetup.setup();
+blockchainSetup.setupNetwork();
 
 /**
  * JSON Schema Validation

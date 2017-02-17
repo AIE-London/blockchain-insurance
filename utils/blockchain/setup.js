@@ -1,5 +1,9 @@
 process.env.GOPATH = __dirname;
 
+var path = require('path');
+var appDir = path.dirname(require.main.filename);
+
+var fs = require('fs');
 var config = require('config');
 var hfc = require('hfc');
 
@@ -15,7 +19,8 @@ var caUrl;
  * Path of the certificate.pem
  * @type {string}
  */
-var certPath = __dirname + "/src/" + config.blockchain.deployRequest.chaincodePath + "/certificate.pem";
+var certPath = appDir + "/" + config.blockchain.deployRequest.chaincodePath + "/certificate.pem";
+
 
 /**
  * File Name of the Certificate
@@ -47,6 +52,8 @@ var network = {};
  */
 var configureNetworkChain = function(){
 
+  console.log("LOG: Confoiguring Network Chain");
+
   // Set Chain
   chain = hfc.newChain(config.chainName);
 
@@ -63,24 +70,26 @@ var configureNetworkChain = function(){
  */
 var setupCertificates = function(){
 
+  console.log("LOG: Setting Up Certificates");
   /**
    * Determining if we are running on a startup or HSBN (High Security Business Network)
    * based on the url of the discovery host name.  The HSBN will contain the string zone.
    * @type {boolean}
    */
-  var isHSBN = peers[0].discovery_host.indexOf('secure') >= 0 ? true : false;
+  var isHSBN = network.credentials.peers[0].discovery_host.indexOf('secure') >= 0 ? true : false;
 
   /**
    * The network ID is an attribute within credentials under ca.
    * We only expect there to be one so take the first
    */
-  var network_id = Object.keys(network.ca)[0];
+
+  var network_id = Object.keys(network.credentials.ca)[0];
 
   /**
    * Generateing the URL for the Certificate Authority
    * @type {string}
    */
-  caUrl = "grpcs://" + network.ca[network_id].discovery_host + ":" + network.ca[network_id].discovery_port;
+  caUrl = "grpcs://" + network.credentials.ca[network_id].discovery_host + ":" + network.credentials.ca[network_id].discovery_port;
 
   /**
    * Configure the KeyValStore which is used to store sensitive keys.
@@ -104,6 +113,13 @@ var setupCertificates = function(){
   /**
    * Reads in the relevant certificate and adds it to the chaincode directory
    */
+
+  console.log(appDir);
+
+
+
+  console.log("certFileName: " + certFileName);
+  console.log("certPath: " + certPath);
   fs.createReadStream(certFileName).pipe(fs.createWriteStream(certPath));
   var cert = fs.readFileSync(certFileName);
 
@@ -122,6 +138,7 @@ var setupCertificates = function(){
  */
 var enrollNetworkUser = function(user){
   return new Promise(function(resolve, reject){
+    console.log("LOG: Enrolling New User: " + user.enrollId);
     chain.enroll(user.enrollId, user.enrollSecret, function(err, networkUser){
       if (err) throw Error ("\nError: failed to enroll network user " + user.enrollId + ": " + err);
       resolve(networkUser);
@@ -136,7 +153,8 @@ var enrollNetworkUser = function(user){
  * Generally the Admin user (user[0])
  * @param registeredUser
  */
-var configureRegistrar = function(registeredUser){
+var configureRegistrar = function(registrarUser){
+  console.log("LOG: Configuring Registrar User");
   chain.setRegistrar(registrarUser);
 };
 
@@ -145,11 +163,14 @@ var setupNetwork = function(){
   configureNetworkChain();
   setupCertificates();
 
-    return enrollNetworkUser(config.blockchain.users[0])
+    return enrollNetworkUser(network.credentials.users[0])
     .then(configureRegistrar)
     .catch(function(error){
       console.error(error);
+    }).then(function(){
+        console.log("Completed Network Setup");
     });
+
 
 };
 
