@@ -1,4 +1,4 @@
-package claim
+package main
 
 import (
 	"errors"
@@ -110,7 +110,7 @@ const   NOT_AT_FAULT        =  "not_at_fault"
 //=================================================================================================================================
 //	 newClaim	-	Constructs a new claim
 //=================================================================================================================================
-func New(id string, relatedPolicy string, description string, incidentDate string, incidentType string) (Claim) {
+func NewClaim(id string, relatedPolicy string, description string, incidentDate string, incidentType string) (Claim) {
 
 	var claim Claim
 

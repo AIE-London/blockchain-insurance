@@ -6,12 +6,6 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"strconv"
 	"encoding/json"
-	"policy"
-	"claim"
-	"init_data"
-	"user"
-	"vehicle"
-	"approved_garages"
 )
 
 // InsuranceChaincode example simple Chaincode implementation
@@ -54,11 +48,6 @@ const   POLICY_ID_PREFIX	= "P"
 const	VEHICLE_ID_PREFIX	= "V"
 const	USER_ID_PREFIX		= "U"
 const   CLAIM_ID_PREFIX		= "C"
-
-//==============================================================================================================================
-//	 Settlement Decision types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
-//==============================================================================================================================
-const   TOTAL_LOSS		=  "total_loss"
 
 func main() {
 	err := shim.Start(new(InsuranceChaincode))
@@ -134,7 +123,7 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 	}
 
 	excess, _ := strconv.Atoi(args[2])
-	policy := policy.New(t.getNextPolicyId(stub), caller, args[0], args[1], excess, args[3])
+	policy := NewPolicy(t.getNextPolicyId(stub), caller, args[0], args[1], excess, args[3])
 
 	bytes, err := json.Marshal(policy)
 
@@ -160,7 +149,7 @@ func (t *InsuranceChaincode) addVehicle(stub shim.ChaincodeStubInterface, caller
 	}
 
 	mileage, _ := strconv.Atoi(args[4])
-	vehicle := vehicle.NewVehicle(t.getNextVehicleId(stub), args[0], args[1], args[2], args[3], mileage)
+	vehicle := NewVehicle(t.getNextVehicleId(stub), args[0], args[1], args[2], args[3], mileage)
 
 	bytes, err := json.Marshal(vehicle)
 
@@ -185,7 +174,7 @@ func (t *InsuranceChaincode) addUser(stub shim.ChaincodeStubInterface, caller st
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 (Forename, Surname, Email, RelatedPolicy)")
 	}
 
-	user := user.NewUser(t.getNextUserId(stub), args[0], args[1], args[2], args[3])
+	user := NewUser(t.getNextUserId(stub), args[0], args[1], args[2], args[3])
 
 	bytes, err := json.Marshal(user)
 
@@ -209,9 +198,9 @@ func (t *InsuranceChaincode) appendApprovedGarages(stub shim.ChaincodeStubInterf
 		return nil, errors.New("Failed to get allApprovedGarages")
 	}
 
-	var newGarages = approved_garages.ApprovedGarages{}
+	var newGarages = ApprovedGarages{}
 
-	var approvedGaragesList approved_garages.ApprovedGarages
+	var approvedGaragesList ApprovedGarages
 	json.Unmarshal(garages, &approvedGaragesList)
 
 	newGarages.Garages = approvedGarages
@@ -245,7 +234,7 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 (RelatedPolicy,Description, Date, IncidentType)")
 	}
 
-	claim := claim.New(t.getNextClaimId(stub), args[0], args[1], args[2], args[3])
+	claim := NewClaim(t.getNextClaimId(stub), args[0], args[1], args[2], args[3])
 
 	isValid, err := t.checkClaimIsValid(stub, caller, claim);
 
@@ -269,7 +258,7 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 //	 checkClaimIsValid - Performs checks on the claim to ensure it is valid
 //      Returns true if valid, or false and an error if invalid
 //=================================================================================================================================
-func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface, caller string, claim claim.Claim) (bool, error) {
+func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface, caller string, claim Claim) (bool, error) {
 
 	//Check policy exists
 	policy, err := t.retrievePolicy(stub, claim.Relations.RelatedPolicy);
@@ -323,9 +312,9 @@ func (t *InsuranceChaincode) retrieveAllPoliciesJSON(stub shim.ChaincodeStubInte
 //					JSON into the Policy struct for use in the contract. Returns the Policy struct.
 //					Returns empty policy if it errors.
 //==============================================================================================================================
-func (t *InsuranceChaincode) retrievePolicy(stub shim.ChaincodeStubInterface, policyId string) (policy.Policy, error) {
+func (t *InsuranceChaincode) retrievePolicy(stub shim.ChaincodeStubInterface, policyId string) (Policy, error) {
 
-	var policy policy.Policy
+	var policy Policy
 
 	bytes, err := t.retrievePolicyJSON(stub, policyId)
 
@@ -385,9 +374,9 @@ func (t *InsuranceChaincode) retrieveAllClaimsJSON(stub shim.ChaincodeStubInterf
 //					JSON into the Claim struct for use in the contract. Returns the Claim struct.
 //					Returns empty claim if it errors.
 //==============================================================================================================================
-func (t *InsuranceChaincode) retrieveClaim(stub shim.ChaincodeStubInterface, claimId string) (claim.Claim, error) {
+func (t *InsuranceChaincode) retrieveClaim(stub shim.ChaincodeStubInterface, claimId string) (Claim, error) {
 
-	var claim claim.Claim
+	var claim Claim
 
 	bytes, err := t.retrieveClaimJSON(stub, claimId)
 
@@ -474,25 +463,25 @@ func (t *InsuranceChaincode) getCurrentIdNumber(stub shim.ChaincodeStubInterface
 func (t *InsuranceChaincode)initSetup(stub shim.ChaincodeStubInterface) {
 	//Policy init data
 	policyId1 := t.getNextPolicyId(stub)
-	t.addPolicy(stub, init_data.PolicyCaller1, init_data.PolicyCallerAffiliation1, init_data.PolicyArgs1)
+	t.addPolicy(stub, PolicyCaller1, PolicyCallerAffiliation1, PolicyArgs1)
 
 	policyId2 := t.getNextPolicyId(stub)
-	t.addPolicy(stub, init_data.PolicyCaller2, init_data.PolicyCallerAffiliation2, init_data.PolicyArgs2)
+	t.addPolicy(stub, PolicyCaller2, PolicyCallerAffiliation2, PolicyArgs2)
 
 	//Vehicle init data
-	t.addVehicle(stub, init_data.VehicleCaller1, init_data.VehicleCallerAffiliation1, init_data.VehicleArgs1)
+	t.addVehicle(stub, VehicleCaller1, VehicleCallerAffiliation1, VehicleArgs1)
 
-	t.addVehicle(stub, init_data.VehicleCaller2, init_data.VehicleCallerAffiliation2, init_data.VehicleArgs2)
+	t.addVehicle(stub, VehicleCaller2, VehicleCallerAffiliation2, VehicleArgs2)
 
 	//User init data
-	completeUserArgs1 := append(init_data.UserArgs1, policyId1)
-	t.addUser(stub, init_data.UserCaller1, init_data.UserCallerAffiliation1, completeUserArgs1)
+	completeUserArgs1 := append(UserArgs1, policyId1)
+	t.addUser(stub, UserCaller1, UserCallerAffiliation1, completeUserArgs1)
 
-	completeUserArgs2 := append(init_data.UserArgs2, policyId2)
-	t.addUser(stub, init_data.UserCaller2, init_data.UserCallerAffiliation2, completeUserArgs2)
+	completeUserArgs2 := append(UserArgs2, policyId2)
+	t.addUser(stub, UserCaller2, UserCallerAffiliation2, completeUserArgs2)
 
 	//ApprovedGarages init data
-	t.appendApprovedGarages(stub, init_data.ApprovedGarages)
+	t.appendApprovedGarages(stub, ApprovedGaragesData)
 }
 
 //==============================================================================================================================
@@ -562,7 +551,7 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  
 	}
 		
 	// Does a claim exist for this vehicle?
-	var theClaim claim.Claim
+	var theClaim Claim
 	var claimId string = args[0]
 	
 	theClaim, err := t.retrieveClaim(stub , claimId)
@@ -570,17 +559,17 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  
 	if err != nil {	fmt.Printf("\nADD_GARAGE_REPORT: Failed to retrieve claim Id: %s", err); return nil, errors.New("ADD_GARAGE_REPORT: Error retrieving claim with claimId = " + claimId) }
 		
 	// Is the Claim in a valid state to receive a garage report?
-    if claim.STATE_AWAITING_GARAGE_REPORT != theClaim.Details.Status {
+    if STATE_AWAITING_GARAGE_REPORT != theClaim.Details.Status {
 		fmt.Printf("ADD_GARAGE_REPORT: unexpected Input for claim with Id: %s\n", claimId)
 		return nil, errors.New("ADD_GARAGE_REPORT: unexpected Input for claim with claimId = " + claimId)
 	}
 	
-	var report claim.ClaimDetailsClaimGarageReport
-	report, err = claim.NewGarageReport(args[1], args[2], args[3], args[4])
+	var report ClaimDetailsClaimGarageReport
+	report, err = NewGarageReport(args[1], args[2], args[3], args[4])
 
 	theClaim.Details.Repair = report
 
-	theClaim.Details.Status = claim.STATE_PENDING_AFTER_REPORT_DECISION
+	theClaim.Details.Status = STATE_PENDING_AFTER_REPORT_DECISION
 
 	t.saveClaim(stub, theClaim)	
 
@@ -594,20 +583,20 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  
 //=========================================================================================
 func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
 	fmt.Println("running afterReportProcess()")
-    var theClaim claim.Claim
+    var theClaim Claim
 	var claimId string = args[0]	
 	
 	theClaim, err := t.retrieveClaim(stub , claimId)
 	
 	if err != nil {	fmt.Printf("\nAFTER_REPORT_PROCESS: Failed to retrieve claim Id: %s", err); return nil, errors.New("AFTER_REPORT_PROCESS: Error retrieving claim with claimId = " + claimId) }
 	
-	if theClaim.Details.Status == claim.STATE_PENDING_AFTER_REPORT_DECISION{
+	if theClaim.Details.Status == STATE_PENDING_AFTER_REPORT_DECISION{
 
 		if theClaim.Details.Repair.WriteOff || theClaim.Details.Repair.Estimate > (t.getCarValue() * 50 / 100) {
 			//process total_loss
 			t.processTotalLoss(stub, theClaim)
 		}else{
-			theClaim.Details.Status = claim.STATE_ORDER_GARAGE_WORK
+			theClaim.Details.Status = STATE_ORDER_GARAGE_WORK
 			t.saveClaim(stub, theClaim)
 		}
 	}
@@ -618,15 +607,15 @@ func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface
 //=========================================================================================
 //
 //=========================================================================================
-func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface,  theClaim claim.Claim) ([]byte, error) {
+func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface,  theClaim Claim) ([]byte, error) {
 
 	fmt.Println("running processTotalLoss()")
     if &theClaim != nil{
-		var settlement claim.ClaimDetailsSettlement
-		settlement.Decision = claim.TOTAL_LOSS
+		var settlement ClaimDetailsSettlement
+		settlement.Decision = TOTAL_LOSS
 		settlement.Dispute = false
 		theClaim.Details.Settlement = settlement
-		theClaim.Details.Status = claim.STATE_TOTAL_LOSS_ESTABLISHED
+		theClaim.Details.Status = STATE_TOTAL_LOSS_ESTABLISHED
 		t.saveClaim(stub, theClaim)
 	}else {fmt.Printf("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim\n"); return nil, errors.New("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim") }
 	return nil, nil
@@ -635,7 +624,7 @@ func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface, 
 //===============================================================================
 // This method saves the claim after updates
 //===============================================================================
-func (t *InsuranceChaincode) saveClaim(stub shim.ChaincodeStubInterface, theClaim  claim.Claim) (bool, error) {
+func (t *InsuranceChaincode) saveClaim(stub shim.ChaincodeStubInterface, theClaim Claim) (bool, error) {
 
 	bytes, err := json.Marshal(theClaim)
 	if err != nil { fmt.Printf("\nSAVE_CLAIM Error converting Claim details: %s", err); return false, errors.New("Error converting Claim details") }

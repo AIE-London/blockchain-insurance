@@ -1,4 +1,4 @@
-package init_data
+package main
 
 //Policy1 data
 var PolicyArgs1 = []string{"31/01/17", "30/01/18", "300", "BP16BRV"}
@@ -31,4 +31,4 @@ var UserCaller2 = "user_type1_2"
 var UserCallerAffiliation2 = "group1"
 
 //ApprovedGarage data
-var ApprovedGarages = []string{"garage01", "garage02", "garage03"}
+var ApprovedGaragesData = []string{"garage01", "garage02", "garage03"}

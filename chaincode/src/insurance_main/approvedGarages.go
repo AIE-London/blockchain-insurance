@@ -1,4 +1,4 @@
-package approved_garages
+package main
 
 //==============================================================================================================================
 //	ApprovedGarages - Defines the structure for an ApprovedGarages object.
