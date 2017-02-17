@@ -97,3 +97,22 @@ docker run -p 9090:9090 -itd --network=dockercompose_default -e HYP_REST_ENDPOIN
 ```
 
 The explorer should then be available on [http://localhost:9090](http://localhost:9090).
+
+### Configuring the vehicle value oracle
+
+In order to use the car value oracle to obtain actual vehicle values from Edmunds you must:
+
+1) Obtain an Edmunds api key and set the env variable. (Note: this step can be skipped, and the oracle service will then just callback with a hardcoded value.)
+
+```
+EDMUNDS_API_KEY
+```
+
+2) Deploy the chain code with an init argument specifying the host address of the oracle service (including port)
+
+3) Run app.js node app
+
+```
+npm install
+node app.js
+```
