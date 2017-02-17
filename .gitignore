@@ -44,3 +44,4 @@ ServiceCredentials.json
 # Blockchain
 Scripts/
 certificate.pem
+keyValStore-*
