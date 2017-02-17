@@ -32,7 +32,9 @@
     "https://localhost:3001",
     "http://localhost:3001",
     "https://localhost:8080",
-    "http://localhost:8080"
+    "http://localhost:8080",
+    "http://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net/",
+    "https://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net/"
   ],
   "app": {
     "paths": {
