@@ -1,4 +1,11 @@
 {
+  "blockchain": {
+    "peerAddress": "localhost:7051",
+    "memberssvcAddress": "localhost:7054",
+    "keystorePath": "/Users/Craig/keyValStore",
+    "chaincodeId": "insurance",
+    "devMode": true
+  },
   "database": {
     "cloudant": {
       "credentials": {
