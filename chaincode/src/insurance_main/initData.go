@@ -11,12 +11,12 @@ var PolicyCaller2 = "user_type1_2"
 var PolicyCallerAffiliation2 = "group1"
 
 //Vehicle1 data
-var VehicleArgs1 = []string{"Ford", "Focus", "BP16BRV", "2016", "7500"}
+var VehicleArgs1 = []string{"Ford", "Focus", "BP16BRV", "2008", "55000", "100924404"}
 var VehicleCaller1 = "vehicle_type1_1"
 var VehicleCallerAffiliation1 = "group1"
 
 //Vehicle2 data
-var VehicleArgs2 = []string{"Vauxhall", "Corsa", "DZ08TYV", "2008", "33500"}
+var VehicleArgs2 = []string{"Vauxhall", "Corsa", "DZ08TYV", "2008", "33500", ""}
 var VehicleCaller2 = "vehicle_type1_2"
 var VehicleCallerAffiliation2 = "group1"
 
