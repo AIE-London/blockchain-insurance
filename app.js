@@ -18,13 +18,15 @@ var routingHelperFunctions = require('./utils/helpers/routing');
 
 var blockchainSetup = require('./utils/blockchain/setup');
 
+var oracle = require('./utils/blockchain/oracle')
+
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
 
 // Create Server
 var app = express();
 
-blockchainSetup.setup();
+//blockchainSetup.setup();
 
 /**
  * JSON Schema Validation
@@ -80,7 +82,7 @@ app.use(logger('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use('/style', express.static(path.join(__dirname, '/views/style')));
-app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/"], auth.middleware));
+app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/", "/" + apiPath.base + "/oracle*"], auth.middleware));
 app.use(auth.allowOriginsMiddleware);
 
 
@@ -223,6 +225,59 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
 
 });
 
+/**
+ * @swagger
+ * /component/oracle/vehicle/{styleId}/value:
+ *   get:
+ *     tags:
+ *       - blockchain-insurance-node-components
+ *     description: Obtain an estimated vehicle value based on an Edmunds Api style id
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - styleId: styleId
+ *         description: the edmunds api style id of the vehicle
+ *         in: path
+ *         type: string
+ *         required: true
+ *       - mileage: mileage
+ *         description: the mileage of the vehicle
+ *         in: query
+ *         type: string
+ *         required: true
+ *       - requestId: requestId
+ *         description: requests with the same requestId will always return the same result
+ *         in: query
+ *         type: string
+ *         required: true
+ *       - callbackFunctionName: callbackFunctionName
+ *         description: the name of the chaincode function that should be invoked when a value has been obtained
+ *         in: query
+ *         type: string
+ *         required: true
+ *     responses:
+ *       202:
+ *         description: Successful ???
+ */
+app.get('/' + apiPath.base + '/oracle/vehicle/:styleId/value', function(request, response){
+  var responseBody = {};
+
+  var mileage = request.query.mileage;
+  var requestId = request.query.requestId;
+  var callbackFunctionName = request.query.callbackFunction;
+  var styleId = request.params.styleId;
+
+  oracle.requestVehicleValuation(requestId, styleId, mileage, callbackFunctionName, function() {
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.statusCode = 202;
+    response.end();
+    return;
+  });
+
+  return;
+
+});
 
  // End API
 
