@@ -66,7 +66,7 @@ var invoke = function(functionName, args, user, callback) {
 
   // Listen for the 'submitted' event
   tx.on('submitted', function(results) {
-    callback();
+    //callback(); -- Removed as we expect 'complete' to be triggered also, where we'd like the response
     console.log("submitted invoke: %j",results);
   });
   // Listen for the 'complete' event.
