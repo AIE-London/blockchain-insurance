@@ -27,6 +27,17 @@ var callbackToChaincode = function(callbackFunctionName, args, callback) {
   blockchainInvoke.invoke(callbackFunctionName, args, callback);
 };
 
+var raiseClaim = function(claim, callback){
+  return new Promise(function(resolve, reject){
+
+    // We can be assured the claim has the relevant fields because of schema validaiton ont he endpoint
+    var args = [claim.relatedPolicy, claim.description, claim.incidentDate, claim.type];
+
+    callbackToChaincode("createClaim", args, callback);
+
+  });
+};
+
 module.exports = {
   requestVehicleValuation: function(requestId, styleId, mileage, callbackFunctionName, callback){
     getVechicleValuationAndCallbackToChain(requestId, styleId, mileage, callbackFunctionName, callback);
