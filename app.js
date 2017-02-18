@@ -18,7 +18,8 @@ var routingHelperFunctions = require('./utils/helpers/routing');
 
 var blockchainSetup = require('./utils/blockchain/setup');
 
-var oracle = require('./utils/blockchain/oracle')
+var oracle = require('./utils/blockchain/oracle');
+var claimService = require('./utils/blockchain/claimService');
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
@@ -214,15 +215,26 @@ app.get('/' + apiPath.base + '/test/:username', function(request, response){
  */
 app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema}), function(request, response){
 
-  // TODO: Interact with blockchain to add new claim
-
   var responseBody = {};
-  responseBody.message = "Endpoint hit successfully";
-  response.setHeader('Content-Type', 'application/json');
-  response.write(JSON.stringify(responseBody));
-  response.end();
-  return;
 
+  claimService.raiseClaim(request.body, function(res){
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = res.results;
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
 });
 
 /**

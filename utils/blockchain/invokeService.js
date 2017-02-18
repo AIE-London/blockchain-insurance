@@ -72,10 +72,11 @@ var invoke = function(functionName, args, user, callback) {
   // Listen for the 'complete' event.
   tx.on('complete', function(results) {
     console.log("completed invoke: %j",results);
+    callback({"results": results});
   });
   // Listen for the 'error' event.
   tx.on('error', function(err) {
-    callback(err)
+    callback({"error": err});
     console.log("error on invoke: %j",err);
   });
 }
