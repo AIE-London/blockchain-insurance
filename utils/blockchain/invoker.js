@@ -1,9 +1,8 @@
 var config = require('config');
 
-
-function ivoke(functonName, args, user, callback){
+var invoke = function (functonName, args, user, callback){
   var invokeRequest = {
-    chaincodeID: condig.blockchain.chaincodeId,
+    chaincodeID: config.blockchain.chaincodeId,
     fcn: functonName,
     args: args
   };
@@ -27,8 +26,9 @@ function ivoke(functonName, args, user, callback){
     console.log("error on invoke: %j",err);
     callback(err)
   });
+};
 
-}
+
 
 module.exports = {
   invoke: invoke

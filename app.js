@@ -1,7 +1,7 @@
 var config =  require('config');
 
 // Integration
-var cloudantIntegration = require('./utils/integration/cloudantIntegration');
+//var cloudantIntegration = require('./utils/integration/cloudantIntegration');
 
 var userService = require('./utils/integration/userService');
 
@@ -16,8 +16,9 @@ var arrayHelperFunctions = require('./utils/helpers/array');
 var objectHelperFunctions = require('./utils/helpers/object');
 var routingHelperFunctions = require('./utils/helpers/routing');
 
-var blockchainSetup = require('./utils/blockchain/setup');
+var blockchainSetup = require('./setup');
 var blockchainInvoke = require('./utils/blockchain/invoker');
+var blockchainQuery = require('./utils/blockchain/querent');
 
 
 // Server Imports
@@ -86,7 +87,7 @@ app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io
 app.use(auth.allowOriginsMiddleware);
 
 
-socketIntegration.initialise(8080);
+//socketIntegration.initialise(8080);
 
 // Development Only
 if ('development' == app.get('env')) {
@@ -162,11 +163,11 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
 
 /**
  * @swagger
- * /component/test/{username}:
+ * /component/test/{username}/invoke:
  *   get:
  *     tags:
  *       - blockchain-insurance-node-components
- *     description: Is a test endpoint
+ *     description: Is a test endpoint for invokeing
  *     produces:
  *       - application/json
  *     parameters:
@@ -179,23 +180,57 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
  *       200:
  *         description: Successful
  */
-app.get('/' + apiPath.base + '/test/:username', function(request, response){
+app.get('/' + apiPath.base + '/test/:username/invoke', function(request, response){
 	var responseBody = {};
 
-  blockchainSetup.setupNetwork()
-    .then(function(){
-      return blockchainSetup.enrollNewUser("ScottAllen", "Claimants")
-    })
+  blockchainSetup.enrollNewUser({"username": request.params.username, "affiliation": "group1"})
     .then(function(user){
-      blockchainInvoke.invoke()
+      blockchainInvoke.invoke("addPolicy", ["2017-01-02", "2017-11-02", 300, "SC077"], user, function(){
+        console.log("hey hey");
+      })
     });
-
 
 	responseBody.message = "Endpoint hit successfully";
 	response.setHeader('Content-Type', 'application/json');
 	response.write(JSON.stringify(responseBody));
 	response.end();
 	return;
+});
+
+/**
+ * @swagger
+ * /component/test/{username}/query:
+ *   get:
+ *     tags:
+ *       - blockchain-insurance-node-components
+ *     description: Is a test endpoint for querying
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username
+ *         in: path
+ *         type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.get('/' + apiPath.base + '/test/:username/query', function(request, response){
+  var responseBody = {};
+
+  blockchainSetup.enrollNewUser({"username": request.params.username, "affiliation": "group1"})
+    .then(function(user){
+      blockchainQuery.query("retrieveAllPolicies", [], user, function(){
+        console.log("hey hey");
+      })
+    });
+
+  responseBody.message = "Endpoint hit successfully";
+  response.setHeader('Content-Type', 'application/json');
+  response.write(JSON.stringify(responseBody));
+  response.end();
+  return;
 });
 
 /**

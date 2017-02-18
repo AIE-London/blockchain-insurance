@@ -16,15 +16,15 @@
     }
   },
   "blockchain": {
-    "chainName":"insurance-chain",
-    "chaincodeId": "268cc891fa554aae7cdfd10158f08e789299dcad8822aed3b5fa1db1de53c82c",
-    "deployWaitTime":"60",
+    "chainName":"adc-ledger",
+    "chaincodeId": "bc3772852d812cdc7dbf5371fbf70b8d1dec04307d44828534582dd7639898fe",
+    "deployWaitTime":"120",
     "user": {
       "username": "JohnDoe",
       "affiliation" : "group1"
     },
     "deployRequest":{
-      "chaincodePath":"chaincode/src",
+      "chaincodePath":"chaincode",
       "functionName":"init",
       "args":[
         "a",

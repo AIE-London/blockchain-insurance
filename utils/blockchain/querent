@@ -1,0 +1,38 @@
+var config = require('config');
+
+var query = function (functonName, args, user, callback){
+
+    console.log("LOG: QUERY: User");
+    console.log(user);
+
+    var queryRequest = {
+        chaincodeID: config.blockchain.chaincodeId,
+        fcn: functonName,
+        args: args
+    };
+
+    console.log("Querying: ");
+    console.log(queryRequest);
+
+    var tx = user.query(queryRequest);
+
+    // Listen for the 'submitted' event
+    tx.on('submitted', function(results) {
+        console.log("submitted query: %j",results);
+        callback();
+    });
+    // Listen for the 'complete' event.
+    tx.on('complete', function(results) {
+        console.log("completed query: %j",results);
+    });
+    // Listen for the 'error' event.
+    tx.on('error', function(err) {
+        console.log("error on query: %j",err);
+        callback(err)
+    });
+};
+
+module.exports = {
+    query: query
+};
+
