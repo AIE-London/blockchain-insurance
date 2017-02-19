@@ -3,7 +3,7 @@ var config = require('config')
 
 var PEER_ADDRESS = config.blockchain.peerAddress;
 var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
-var KEYSTORE_PATH = config.blockchain.keystorePath;
+var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 var CHAINCODE_ID  = config.blockchain.chaincodeId;
 
 var chain = hfc.newChain("insurance");
@@ -76,10 +76,10 @@ var invoke = function(functionName, args, user, callback) {
   });
   // Listen for the 'error' event.
   tx.on('error', function(err) {
-    callback({"error": err});
+    callback(err);
     console.log("error on invoke: %j",err);
   });
-}
+};
 
 module.exports = {
   invoke: function(functionName, args, callback){

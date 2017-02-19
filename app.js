@@ -20,6 +20,7 @@ var blockchainSetup = require('./utils/blockchain/setup');
 
 var oracle = require('./utils/blockchain/oracle');
 var claimService = require('./utils/blockchain/claimService');
+var garageService = require('./utils/blockchain/garageService');
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
@@ -38,6 +39,7 @@ var validate = require('express-jsonschema').validate;
 var schemas = {};
 schemas.authSchema = require("./config/schemas/authSchema.json");
 schemas.postClaimSchema = require("./config/schemas/postClaimSchema.json");
+schemas.postGarageReportSchemas = require('./config/schemas/postGarageReportSchema.json');
 
 /**
  * Swagger Configuration
@@ -61,6 +63,7 @@ var swaggerSpec = swaggerJSDoc(options);
 // Re-use validation-schemas for swagger, but delete unneeded attributes
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/authSchema.json"), "authSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postClaimSchema.json"), "postClaimSchema");
+swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postGarageReportSchema.json"), "postGarageReportSchema");
 
 /**
  * Environment Configuration
@@ -207,6 +210,10 @@ app.get('/' + apiPath.base + '/test/:username', function(request, response){
  *         in: path
  *         type: string
  *         required: true,
+ *       - name: post-claim-schema
+ *         description: claim content
+ *         in: body
+ *         required: true
  *         schema:
  *           $ref: '/definitions/postClaimSchema'
  *     responses:
@@ -236,6 +243,62 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
 
   });
 });
+
+/**
+ * @swagger
+ * /user/{username}/garage/{garage}/report:
+ *   post:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Endpoint for submitting garage reports against claims
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username of the person submitting the report
+ *         in: path
+ *         type: string
+ *         required: true,
+ *       - name: garageReport
+ *         description: the garage report
+ *         in: path
+ *         type: string
+ *         required: true,
+ *       - name: post-garage-report-schema
+ *         description: claim content
+ *         in: body
+ *         required: true
+ *         schema:
+ *           $ref: '/definitions/postGarageReportSchema'
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.post('/user/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), function(request, response){
+
+  var responseBody = {};
+
+  garageService.addGarageReport(request.body, function(res){
+
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = res.results;
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
+});
+
 
 /**
  * @swagger
