@@ -167,7 +167,7 @@ var setupNetwork = function(){
 
   configureNetworkChain();
   setupCertificates();
-
+  console.log("Completed setupCertificates");
   if (config.blockchain.setup.shouldSetupUsers) {
     return enrollRegistrarUser(config.blockchain.registrarUser)
       .then(configureRegistrar)

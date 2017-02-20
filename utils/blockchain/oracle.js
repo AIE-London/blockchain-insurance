@@ -1,5 +1,5 @@
 var vehicleValuationService = require('../vehicle/valuationService')
-var blockchainInvoke = require('./invokeService')
+var blockchainInvoke = require('./blockchainService')
 var NodeCache = require("node-cache");
 var config = require('config')
 
