@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "OPTIONS",
+    "urlPattern": ".*"
+  },
+  "response": {
+    "status": 200,
+    "body": "POST, GET, PUT, PATCH, DELETE",
+    "headers": {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "*",
+      "Access-Control-Allow-Headers": "authorization, content-type",
+      "Access-Control-Expose-Headers": "*"
+    }
+  }
+} 

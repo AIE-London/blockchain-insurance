@@ -688,7 +688,8 @@ func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface, 
 		settlement.Decision = TOTAL_LOSS
 		settlement.Dispute = false
 		theClaim.Details.Settlement = settlement
-		theClaim.Details.Status = STATE_TOTAL_LOSS_ESTABLISHED
+		//theClaim.Details.Status = STATE_TOTAL_LOSS_ESTABLISHED
+		theClaim.Details.Status = STATE_AWAITING_CLAIMANT_CONFIRMATION
 		theClaim.Details.Settlement.TotalLoss.CarValueEstimate = vehicleValue
 		t.saveClaim(stub, theClaim)
 	}else {fmt.Printf("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim\n"); return nil, errors.New("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim") }
