@@ -39,6 +39,7 @@ jspm_packages
 # Custom
 .idea
 config/credentials/ibm_blockchain_credentials.json
+config/credentials/gcm.json
 
 # The build Packages
 chaincode/pkg
