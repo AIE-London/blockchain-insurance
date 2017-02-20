@@ -34,7 +34,7 @@
           },
           {
             "name": "role",
-            "value": "claimant"
+            "value": "policyholder"
           }
         ]
       },
@@ -48,7 +48,7 @@
           },
           {
             "name": "role",
-            "value": "claimant"
+            "value": "poicyholder"
           }
         ]
       },
