@@ -34,7 +34,6 @@ type Coordinates struct {
 //   all domain objects of a certain type.
 //==============================================================================================================================
 const   CURRENT_POLICY_ID_KEY	= "currentPolicyId"
-const	CURRENT_VEHICLE_ID_KEY	= "currentVehicleId"
 const	CURRENT_USER_ID_KEY	= "currentUserId"
 const   CURRENT_CLAIM_ID_KEY	= "currentClaimId"
 
@@ -45,7 +44,6 @@ const	APPROVED_GARAGES_KEY	= "approvedGarages"
 //	 Prefixes for the different domain object type ids
 //==============================================================================================================================
 const   POLICY_ID_PREFIX	= "P"
-const	VEHICLE_ID_PREFIX	= "V"
 const	USER_ID_PREFIX		= "U"
 const   CLAIM_ID_PREFIX		= "C"
 
@@ -59,11 +57,11 @@ func main() {
 func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
 	stub.PutState(CURRENT_POLICY_ID_KEY, []byte("0"))
-	stub.PutState(CURRENT_VEHICLE_ID_KEY, []byte("0"))
 	stub.PutState(CURRENT_USER_ID_KEY, []byte("0"))
 	stub.PutState(CURRENT_CLAIM_ID_KEY, []byte("0"))
 
 	t.initSetup(stub)
+	InitOracleService(stub, args)
 
 	return nil, nil
 }
@@ -89,6 +87,9 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 		//TODO
 	} else if function == "agreePayoutAmount" {
 		return t.agreePayoutAmount(stub, caller, caller_affiliation, args)		
+	} else if function == "vehicleValueOracleCallback" {
+		fmt.Printf("vehicleValueOracleCallback: ReqeustId / Value" + args[0] + " / " + args[1]);
+		return nil, t.vehicleValueOracleCallback(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -140,18 +141,18 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 
 //=================================================================================================================================
 //	 Add Vehicle  - Creates a Vehicle object and then saves it to the ledger.
-//          args - make, model, registration, year, mileage
+//          args - make, model, registration, year, mileage, styleId
 //=================================================================================================================================
 func (t *InsuranceChaincode) addVehicle(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running addVehicle()")
 
-	if len(args) != 5 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 5 (Make, Model, Registration, Year, Mileage)")
+	if len(args) != 6 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 6 (Make, Model, Registration, Year, Mileage, StyleId)")
 	}
 
 	mileage, _ := strconv.Atoi(args[4])
-	vehicle := NewVehicle(t.getNextVehicleId(stub), args[0], args[1], args[2], args[3], mileage)
+	vehicle := NewVehicle(args[2], args[0], args[1], args[2], args[3], mileage, args[5])
 
 	bytes, err := json.Marshal(vehicle)
 
@@ -404,6 +405,71 @@ func (t *InsuranceChaincode) retrieveClaimJSON(stub shim.ChaincodeStubInterface,
 }
 
 //==============================================================================================================================
+//	 retrieveVehicle- Gets the state of the data at vehicleId in the ledger then converts it from the stored
+//					JSON into the Vehicle struct for use in the contract. Returns the Vehicle struct.
+//					Returns empty vehicle if it errors.
+//==============================================================================================================================
+func (t *InsuranceChaincode) retrieveVehicle(stub shim.ChaincodeStubInterface, vehicleId string) (Vehicle, error) {
+
+	var aVehicle Vehicle
+
+	bytes, err := t.retrieveVehicleJSON(stub, vehicleId)
+
+	if err != nil {	fmt.Printf("retrieveVehicle: Cannot read vehicle: %s", err); return aVehicle, errors.New("retrieveVehicle: Cannot read vehicle")}
+
+	err = json.Unmarshal(bytes, &aVehicle);
+
+	if err != nil {	fmt.Printf("retrieveVehicle: Corrupt vehicle record "+string(bytes)+": %s", err); return aVehicle, errors.New("retrieveVehicle: Corrupt vehicle record"+string(bytes))}
+
+	return aVehicle, nil
+}
+
+//==============================================================================================================================
+//	 retrieveVehicleJSON - Gets the state of the data at vehicleId in the ledger and returns the JSON representation
+//==============================================================================================================================
+func (t *InsuranceChaincode) retrieveVehicleJSON(stub shim.ChaincodeStubInterface, vehicleId string) ([]byte, error) {
+
+	bytes, err := stub.GetState(vehicleId)
+
+	if err != nil {	fmt.Printf("retrieveVehicleJSON: Failed to invoke: %s", err); return nil, errors.New("retrieveVehicleJSON: Error retrieving vehicle with id = " + vehicleId) }
+
+	return bytes, nil
+}
+
+//==============================================================================================================================
+//	 vehicleValueCallback - Callback, called by an oracle when a vehicle value has been retreived
+//		args - requestId, vehicleValue
+//==============================================================================================================================
+func (t *InsuranceChaincode) vehicleValueOracleCallback(stub shim.ChaincodeStubInterface, args []string) (error) {
+
+	vehicleValue, err := strconv.Atoi(args[1])
+
+	if err != nil {	fmt.Printf("vehicleValueCallback: Cannot parse car value %s", err); return errors.New("vehicleValueCallback: Cannot parse car value")}
+
+	bytes, err := stub.GetState(args[0])
+
+	if err != nil {	fmt.Printf("vehicleValueCallback: Cannot read claim id from callback state: %s", err); return errors.New("vehicleValueCallback: Cannot read claim from callback state")}
+
+	claimId := string(bytes)
+
+	t.afterVehicleValueObtainedProcess(stub, claimId, vehicleValue)
+
+	return err
+}
+
+func (t *InsuranceChaincode) queryOracleForVehicleValue(stub shim.ChaincodeStubInterface, claim Claim, vehicle Vehicle) {
+	//Store claim id against transaction id so it can be retreived during callback
+	stub.PutState(stub.GetTxID(), []byte(claim.Id))
+	err := RequestVehicleValuationFromOracle(stub, stub.GetTxID(), vehicle, "vehicleValueOracleCallback")
+
+	if err != nil {
+		fmt.Println("Error querying oracle for vehicle value: %s", err);
+		fmt.Println("Calling callback with default value")
+		t.vehicleValueOracleCallback(stub, []string{stub.GetTxID(), "5555"})
+	}
+}
+
+//==============================================================================================================================
 //	 ID Functions - The current id of both policies and claims are stored in blockchain state.
 //   This value is incremented when a new policy or claim is created.
 //   A prefix is added to the id's to differentiate between policies and claims
@@ -415,11 +481,6 @@ func (t *InsuranceChaincode) getCurrentPolicyIdNumber(stub shim.ChaincodeStubInt
 func (t *InsuranceChaincode) getNextPolicyId(stub shim.ChaincodeStubInterface) (string) {
 
 	return t.getNextId(stub, CURRENT_POLICY_ID_KEY, POLICY_ID_PREFIX);
-}
-
-func (t *InsuranceChaincode) getNextVehicleId(stub shim.ChaincodeStubInterface) (string) {
-
-	return t.getNextId(stub, CURRENT_VEHICLE_ID_KEY, VEHICLE_ID_PREFIX);
 }
 
 func (t *InsuranceChaincode) getNextUserId(stub shim.ChaincodeStubInterface) (string) {
@@ -464,10 +525,7 @@ func (t *InsuranceChaincode) getCurrentIdNumber(stub shim.ChaincodeStubInterface
 //==============================================================================================================================
 func (t *InsuranceChaincode)initSetup(stub shim.ChaincodeStubInterface) {
 	//Policy init data
-	policyId1 := t.getNextPolicyId(stub)
 	t.addPolicy(stub, PolicyCaller1, PolicyCallerAffiliation1, PolicyArgs1)
-
-	policyId2 := t.getNextPolicyId(stub)
 	t.addPolicy(stub, PolicyCaller2, PolicyCallerAffiliation2, PolicyArgs2)
 
 	//Vehicle init data
@@ -476,10 +534,10 @@ func (t *InsuranceChaincode)initSetup(stub shim.ChaincodeStubInterface) {
 	t.addVehicle(stub, VehicleCaller2, VehicleCallerAffiliation2, VehicleArgs2)
 
 	//User init data
-	completeUserArgs1 := append(UserArgs1, policyId1)
+	completeUserArgs1 := append(UserArgs1, "P1")
 	t.addUser(stub, UserCaller1, UserCallerAffiliation1, completeUserArgs1)
 
-	completeUserArgs2 := append(UserArgs2, policyId2)
+	completeUserArgs2 := append(UserArgs2, "P2")
 	t.addUser(stub, UserCaller2, UserCallerAffiliation2, completeUserArgs2)
 
 	//ApprovedGarages init data
@@ -580,7 +638,7 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  
 
 	t.saveClaim(stub, theClaim)	
 
-	t.afterReportProcess(stub, caller, caller_affiliation, args)
+	t.afterReportProcess(stub, theClaim)
 	
 	return nil, nil
 }
@@ -588,20 +646,28 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  
 //=========================================================================================
 // This Function process the claim after a report has arrived
 //=========================================================================================
-func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
-	fmt.Println("running afterReportProcess()")
-    var theClaim Claim
-	var claimId string = args[0]	
+func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface, claim Claim) {
+	//Get vehicle
+	policy, _ := t.retrievePolicy(stub, claim.Relations.RelatedPolicy)
+	vehicle, _ := t.retrieveVehicle(stub, policy.Relations.Vehicle)
+
+	t.queryOracleForVehicleValue(stub, claim, vehicle)
+}
+//=========================================================================================
+// This Function process the claim after a report has arrived
+//=========================================================================================
+func (t *InsuranceChaincode) afterVehicleValueObtainedProcess(stub shim.ChaincodeStubInterface, claimId string, vehicleValue int) ([]byte, error) {
+	fmt.Println("running afterVehicleValueObtainedProcess()")
 	
 	theClaim, err := t.retrieveClaim(stub , claimId)
 	
-	if err != nil {	fmt.Printf("\nAFTER_REPORT_PROCESS: Failed to retrieve claim Id: %s", err); return nil, errors.New("AFTER_REPORT_PROCESS: Error retrieving claim with claimId = " + claimId) }
+	if err != nil {	fmt.Printf("\nAFTER_VALUE_PROCESS: Failed to retrieve claim Id: %s", err); return nil, errors.New("AFTER_VALUE_PROCESS: Error retrieving claim with claimId = " + claimId) }
 	
 	if theClaim.Details.Status == STATE_PENDING_AFTER_REPORT_DECISION{
 
-		if theClaim.Details.Report.WriteOff || theClaim.Details.Report.Estimate > (t.getCarValue() * 50 / 100) {
+		if theClaim.Details.Report.WriteOff || theClaim.Details.Report.Estimate > (vehicleValue * 50 / 100) {
 			//process total_loss
-			t.processTotalLoss(stub, theClaim)
+			t.processTotalLoss(stub, theClaim, vehicleValue)
 		}else{
 			theClaim.Details.Status = STATE_ORDER_GARAGE_WORK
 			t.saveClaim(stub, theClaim)
@@ -614,7 +680,7 @@ func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface
 //=========================================================================================
 //
 //=========================================================================================
-func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface,  theClaim Claim) ([]byte, error) {
+func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface, theClaim Claim, vehicleValue int) ([]byte, error) {
 
 	fmt.Println("running processTotalLoss()")
     if &theClaim != nil{
@@ -623,6 +689,7 @@ func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface, 
 		settlement.Dispute = false
 		theClaim.Details.Settlement = settlement
 		theClaim.Details.Status = STATE_TOTAL_LOSS_ESTABLISHED
+		theClaim.Details.Settlement.TotalLoss.CarValueEstimate = vehicleValue
 		t.saveClaim(stub, theClaim)
 	}else {fmt.Printf("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim\n"); return nil, errors.New("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim") }
 	return nil, nil
@@ -704,15 +771,6 @@ func (t *InsuranceChaincode) saveClaim(stub shim.ChaincodeStubInterface, theClai
 	if err != nil { fmt.Printf("\nSAVE_CLAIM: Error adding garage Report: %s", err); return false, errors.New("Error storing claim details") }
 	
 	return true, nil
-}
-
-//===============================================================================
-//  Temporary function to return a hardcoded value of the car after the fix
-//  Basicaly, this will call he insurer core API to get the Car value
-//===============================================================================
-func (t *InsuranceChaincode) getCarValue() (int) {
-
-	return 3000;
 }
 
 
