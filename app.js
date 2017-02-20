@@ -84,7 +84,9 @@ app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io
 app.use(auth.allowOriginsMiddleware);
 
 
-socketIntegration.initialise(8000);
+var server = http.createServer(app);
+socketIntegration.initialise(server);
+server.listen(process.env.PORT || 3000, '127.0.0.1');
 
 // Development Only
 if ('development' == app.get('env')) {
