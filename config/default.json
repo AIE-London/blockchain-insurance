@@ -2,7 +2,7 @@
   "blockchain": {
     "peerAddress": "services-uscentral.skytap.com:8549",
     "memberssvcAddress": "services-uscentral.skytap.com:8447",
-    "keystorePath": "./keyValStore",
+    "keystorePath": "/keyValStore",
     "chaincodeId": "insurance",
     "devMode": true,
     "registrarUser": {

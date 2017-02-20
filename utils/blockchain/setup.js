@@ -29,7 +29,7 @@ var deployUser;
 var PEER_ADDRESS = config.blockchain.peerAddress;
 var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
 
-var KEYSTORE_PATH = config.blockchain.keystorePath;
+var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 
 /** FUNCTIONS **/
 
