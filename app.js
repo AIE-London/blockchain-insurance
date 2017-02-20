@@ -248,7 +248,7 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
 
 /**
  * @swagger
- * /user/{username}/garage/{garage}/report:
+ * /caller/{username}/garage/{garage}/report:
  *   post:
  *     tags:
  *       - blockchain-insurance
@@ -276,7 +276,7 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  *       200:
  *         description: Successful
  */
-app.post('/user/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), function(request, response){
+app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), function(request, response){
 
   var responseBody = {};
 
@@ -301,6 +301,30 @@ app.post('/user/:username/garage/:garage/report', validate({ body: schemas.postG
   });
 });
 
+app.get('/caller/:username/history/claims/all', function(request, response){
+
+  var responseBody = {};
+
+  claimService.getFullHistory(function(res){
+
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = res.results;
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
+});
 
 /**
  * @swagger

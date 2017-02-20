@@ -1,10 +1,10 @@
 {
   "blockchain": {
-    "peerAddress": "services-uscentral.skytap.com:8549",
+    "peerAddress": "services-uscentral.skytap.com:8551",
     "memberssvcAddress": "services-uscentral.skytap.com:8447",
     "keystorePath": "/keyValStore",
-    "chaincodeId": "insurance",
-    "devMode": true,
+    "chaincodeId": "ce7b63366332efdef4a314e1d3320ade00dfd59ac926c4a19be6aea47e817c791bb8888714ef15ce624fef75b1a0cf892928297a3056418ba05fb5e199f7c0f9",
+    "devMode": false,
     "registrarUser": {
       "enrollmentId": "WebAppAdmin",
       "enrollSecret": "DJY27pEnl16d"

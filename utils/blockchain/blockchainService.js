@@ -27,15 +27,35 @@ chain.addPeer("grpc://" + PEER_ADDRESS);
 
 chain.setDevMode(config.blockchain.devMode);
 
+var login = function(name, secret, callback){
+  console.log("Enrolling: " + name);
+  chain.enroll(name, secret, function(err, user){
+    if (err){
+      console.error(err);
+      console.log("Failed to enroll, so getting user..");
+      chain.getUser(name, function(err, userViaGet){
+        if (err) {
+          console.error(err);
+          callback({error: err});
+        }
+        console.log(userViaGet);
+        callback(userViaGet);
+      });
+    }else {
+      callback(user);
+    }
+  });
+};
+
 var loginAndInvoke = function(functionName, args, callback) {
 
   console.log("Enrolling");
-  chain.enroll("jim", "6avZQLwcUe9b", function (err, user) {
+  chain.enroll("lukas", "NPKYL39uKbkj", function (err, user) {
     if (err) {
       console.error(err);
       console.log("Attemping to get user");
 
-      chain.getUser("jim", function (err, userViaGet) {
+      chain.getUser("lukas", function (err, userViaGet) {
         if (err) {
           console.error(err);
           callback(err);
@@ -81,8 +101,52 @@ var invoke = function(functionName, args, user, callback) {
   });
 };
 
+var loginAndQuery = function(funcionName, args, callback){
+  login("lukas", "NPKYL39uKbkj", function(user){
+    console.log("--- USER ---");
+    console.log(user);
+    if (user.error){
+      callback(user.error);
+    } else {
+      query(funcionName, args, user, callback);
+    }
+  })
+};
+
+var query = function(functionName, args, user, callback){
+  var queryRequest = {
+    chaincodeID: CHAINCODE_ID,
+    fcn: functionName,
+    args: args
+  };
+
+  console.log("QUERY REQUEST: " + JSON.stringify(queryRequest));
+
+  var tx = user.query(queryRequest);
+
+  tx.on('submitted', function(results) {
+    //callback(); -- Removed as we expect 'complete' to be triggered also, where we'd like the response
+    console.log("submitted query: %j",results);
+  });
+
+  tx.on('complete', function(results){
+    console.log("completed query: %j", results);
+    callback({"results": new Buffer(results.result,'hex').toString()});
+  });
+
+  tx.on('error', function(err){
+    console.log("error on query: %j", err);
+    callback(err);
+  })
+
+};
+
+
 module.exports = {
   invoke: function(functionName, args, callback){
     loginAndInvoke(functionName, args, callback);
+  },
+  query: function(functionName, args, callback){
+    loginAndQuery(functionName, args, callback);
   }
 };
