@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/claim/7"
+  },
+  "response": {
+    "status": 503,
+    "jsonBody": {
+      "reason": "Service unavailable",
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "authorization, content-type",
+        "Access-Control-Expose-Headers": "*"
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/claim/1234"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "*",
+      "Access-Control-Allow-Headers": "authorization, content-type",
+      "Access-Control-Expose-Headers": "*"
+    }
+  }
+}
+

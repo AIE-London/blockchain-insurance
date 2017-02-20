@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/claim/2"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "claimType": "Type 2",
+      "claimDescription": "Description of claim",
+      "relatedPolicy": "Policy 2",
+      "incidentDate": "2016-12-07",
+      "incidentType": "Single Party",
+      "status": "Car Inspected"},
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "*",
+      "Access-Control-Allow-Headers": "authorization, content-type",
+      "Access-Control-Expose-Headers": "*"
+    }
+  }
+}

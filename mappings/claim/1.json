@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/claim/1"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "claimType": "Type 1",
+      "claimDescription": "Description of claim",
+      "relatedPolicy": "Policy 1",
+      "incidentDate": "2017-01-01",
+      "incidentType": "Single Party",
+      "status": "Claim Raised"},
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "*",
+      "Access-Control-Allow-Headers": "authorization, content-type",
+      "Access-Control-Expose-Headers": "*"
+    }
+  }
+}
