@@ -74,9 +74,9 @@ var setupCertificates = function(){
    * This data.
    **/
 
-  console.log("KeyValStoreDestination: " + config.blockchain.keystorePath);
+  console.log("KeyValStoreDestination: " + KEYSTORE_PATH);
 
-  chain.setKeyValStore(hfc.newFileKeyValStore(config.blockchain.keystorePath));
+  chain.setKeyValStore(hfc.newFileKeyValStore(KEYSTORE_PATH));
 };
 
 
