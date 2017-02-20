@@ -18,12 +18,13 @@ type VehicleDetails struct {
 	Registration		string		`json:"registration"`
 	Year			string		`json:"year"`
 	Mileage			int		`json:"mileage"`
+	StyleId			string		`json:"styleId"`
 }
 
 //=================================================================================================================================
 //	 New Vehicle	-	Constructs a new vehicle
 //=================================================================================================================================
-func NewVehicle(id string, make string, model string, registration string, year string, mileage int) (Vehicle) {
+func NewVehicle(id string, make string, model string, registration string, year string, mileage int, styleId string) (Vehicle) {
 	var vehicle Vehicle
 
 	vehicle.Id = id
@@ -34,6 +35,7 @@ func NewVehicle(id string, make string, model string, registration string, year 
 	vehicle.Details.Registration = registration
 	vehicle.Details.Year = year
 	vehicle.Details.Mileage = mileage
+	vehicle.Details.StyleId = styleId
 
 	return vehicle
 }
