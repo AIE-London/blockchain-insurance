@@ -26,6 +26,11 @@ var express = require('express'), http = require('http'), path = require('path')
 // Create Server
 var app = express();
 
+var server = http.createServer(app);
+socketIntegration.initialise(server);
+server.listen(process.env.PORT || 3000);
+
+
 blockchainSetup.setupNetwork();
 
 /**
@@ -88,9 +93,6 @@ app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io
 app.use(auth.allowOriginsMiddleware);
 
 
-var server = http.createServer(app);
-socketIntegration.initialise(server);
-server.listen(process.env.PORT || 3000, '127.0.0.1');
 
 // Development Only
 if ('development' == app.get('env')) {
