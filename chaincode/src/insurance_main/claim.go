@@ -23,7 +23,8 @@ type ClaimDetails struct {
 	Status		string							`json:"status"`
 	Description	string							`json:"description"`
 	Incident	ClaimDetailsIncident			`json:"incident"`
-	Repair		ClaimDetailsClaimGarageReport	`json:"repair"`
+	Report		ClaimDetailsClaimGarageReport	`json:"report"`
+	Repair		RepairWorkOrder             	`json:"repair"`
 	Settlement	ClaimDetailsSettlement			`json:"settlement"`
 }
 
@@ -80,6 +81,21 @@ type ClaimRelations struct {
 	RelatedPolicy	string	`json:"relatedPolicy"`
 }
 
+//=============================================================================================================================
+//  RepairWorkOrder - Defines the structure for a RepairWorkOrder object.
+//     RepairWorkOrder can be in the following workstate : STATUS_OPEN - STATUS_CLOSED - STATE_IN_PROGRESS
+//==============================================================================================================================
+type RepairWorkOrder struct {
+	Garage  	           string	`json:"garages"`
+	WorkOrderSeq           string   `json:"workOrderSeq"`
+	Description            string   `json:"description"`
+	StartDate              string   `json:"startDate"`
+	EndDate                string   `json:"endDate"`
+	EstimatedRepairCost    int      `json:"estimatedRepairCost"`
+	ActualRepairCost       int      `json:"actualRepairCost"`
+	WorkStatus             string   `json:"workStatus"`
+}
+
 //==============================================================================================================================
 //	 Claim Status types - TODO Flesh these out. TODO Following IBM sample, but should/could these be enums?
 //==============================================================================================================================
@@ -87,12 +103,13 @@ const   STATE_AWAITING_POLICE_REPORT                = "awaiting_police_report"
 const   STATE_AWAITING_GARAGE_REPORT                = "awaiting_garage_report"
 const   STATE_PENDING_AFTER_REPORT_DECISION         = "pending_decision"
 const   STATE_TOTAL_LOSS_ESTABLISHED                = "total_loss_established"
-const   STATE_ORDER_GARAGE_WORK                     = "awaiting_garage_work"
+const   STATE_ORDER_GARAGE_WORK                     = "garage_work_ordered"
 const   STATE_AWAITING_GARAGE_WORK_CONFIRMATION     = "awaiting_garage_work"
 const   STATE_AWAITING_CLAIMANT_CONFIRMATION        = "awaiting_claimant_confirmation"
 const   STATE_SETTLED  			                    = "settled"
 const	STATUS_OPEN									= "open"
 const	STATUS_CLOSED								= "closed"
+const   STATE_IN_PROGRESS                           = "in_progress"
 
 //==============================================================================================================================
 //	 Claim Type types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
