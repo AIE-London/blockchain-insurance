@@ -50,12 +50,12 @@ var login = function(name, secret, callback){
 var loginAndInvoke = function(functionName, args, callback) {
 
   console.log("Enrolling");
-  chain.enroll("jim", "6avZQLwcUe9b", function (err, user) {
+  chain.enroll("lukas", "NPKYL39uKbkj", function (err, user) {
     if (err) {
       console.error(err);
       console.log("Attemping to get user");
 
-      chain.getUser("jim", function (err, userViaGet) {
+      chain.getUser("lukas", function (err, userViaGet) {
         if (err) {
           console.error(err);
           callback(err);
@@ -102,7 +102,7 @@ var invoke = function(functionName, args, user, callback) {
 };
 
 var loginAndQuery = function(funcionName, args, callback){
-  login("jim", "6avZQLwcUe9b", function(user){
+  login("lukas", "NPKYL39uKbkj", function(user){
     console.log("--- USER ---");
     console.log(user);
     if (user.error){
@@ -120,6 +120,8 @@ var query = function(functionName, args, user, callback){
     args: args
   };
 
+  console.log("QUERY REQUEST: " + JSON.stringify(queryRequest));
+
   var tx = user.query(queryRequest);
 
   tx.on('submitted', function(results) {
@@ -129,7 +131,7 @@ var query = function(functionName, args, user, callback){
 
   tx.on('complete', function(results){
     console.log("completed query: %j", results);
-    callback({"results": results});
+    callback({"results": new Buffer(results.result,'hex').toString()});
   });
 
   tx.on('error', function(err){
