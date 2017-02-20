@@ -5,7 +5,7 @@
 var socketIO;
 
 var initialise = function (server) {
-  socketIO = require('socket.io')(8080);
+  socketIO = require('socket.io')(server);
   console.log("Hello");
 
   socketIO.on('connection', function (socket) {
