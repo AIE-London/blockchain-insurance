@@ -9,8 +9,6 @@ var auth = require('./utils/integration/authService');
 
 var socketIntegration = require('./utils/integration/socketIntegration');
 
-
-
 // Helper Functions
 var arrayHelperFunctions = require('./utils/helpers/array');
 var objectHelperFunctions = require('./utils/helpers/object');
@@ -28,7 +26,7 @@ var express = require('express'), http = require('http'), path = require('path')
 // Create Server
 var app = express();
 
-//blockchainSetup.setup();
+blockchainSetup.setupNetwork();
 
 /**
  * JSON Schema Validation

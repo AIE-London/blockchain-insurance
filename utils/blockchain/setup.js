@@ -1,214 +1,321 @@
-// Import version to dynamically grab latest chaincode
-var version =  require('config').app.version;
-var fullVersion = version.major + "." + version.minor + "." + version.bug;
+var path = require('path');
+var util = require('util');
+var appDir = path.dirname(require.main.filename);
+process.env.GOPATH = appDir;
 
-// Import SDK
-var Ibc1 = require('ibm-blockchain-js');
-var ibc = new Ibc1();
+var fs = require('fs');
+var config = require('config');
+var hfc = require('hfc');
 
-// peers and users
-var peers = [];
-var users = [];
+/** CHAINCODE **/
 
-// Options for loading SDK
-var options = {};
-
-// helper functions
 /**
- * Checks if the peer wants tls or not
- * @param peer_array
- * @returns {boolean}
+ * Id of the deployed chaincode
+ * @type {string}
  */
-var detect_tls_or_not = function(peer_array){
-  var tls = false;
-  if(peer_array[0] && peer_array[0].api_port_tls){
-    if(!isNaN(peer_array[0].api_port_tls)) tls = true;
+var chaincodeId;
+
+/**
+ * Path of the deployed chaincode
+ * @type {string}
+ */
+var chaincodeIdPath = __dirname + "/chaincodeId";
+
+var chain;
+
+/** NETWORK **/
+var network = {};
+var deployUser;
+var PEER_ADDRESS = config.blockchain.peerAddress;
+var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
+
+var KEYSTORE_PATH = config.blockchain.keystorePath;
+
+/** FUNCTIONS **/
+
+/**
+ * @sets {chain, network}
+ */
+var configureNetworkChain = function(){
+
+  if (fileExists(chaincodeIdPath)) {
+    chaincodeId = fs.readFileSync(chaincodeIdPath, 'utf8');
+    console.log("LOG: Set ChaincodeId: " + chaincodeId);
   }
-  return tls;
+
+  console.log("LOG: Configuring Network Chain");
+  console.log("Peer address: " + PEER_ADDRESS);
+  console.log("Mmberssvc address: " + MEMBERSRVC_ADDRESS);
+
+  // Set Chain
+  chain = hfc.newChain('insurance-setup');
+  chain.setDevMode(false);
+
+  // Set the URL for membership services
+  chain.setMemberServicesUrl("grpc://" + MEMBERSRVC_ADDRESS);
+
+// Add at least one peer's URL.  If you add multiple peers, it will failover
+// to the 2nd if the 1st fails, to the 3rd if both the 1st and 2nd fails, etc.
+  chain.addPeer("grpc://" + PEER_ADDRESS);
 };
 
-//loop here, check if chaincode is up and running or not
-var check_if_deployed = function(e, attempt){
-  if(e){
-    console.log("In check_if_deployed, error");
-    console.log(e);
-    //cb_deployed(e);																		//looks like an error pass it along
-  }
-  else if(attempt >= 15){																	//tried many times, lets give up and pass an err msg
-    console.log('[preflight check]', attempt, ': failed too many times, giving up');
-    var msg = 'chaincode is taking an unusually long time to start. this sounds like a network error, check peer logs';
-    if(!process.error) process.error = {type: 'deploy', msg: msg};
-    //cb_deployed(msg);
-  }
-  else{
-    console.log('[preflight check]', attempt, ': testing if chaincode is ready');
-    chaincode.query.read(['_authorisedGarages'], function(err, resp){
-      var cc_deployed = false;
-      try{
-        if(err == null){															//no errors is good, but can't trust that alone
-          if(resp === 'null') cc_deployed = false; // If the chaincode is deployed and Init ran, this node should not be null
-          else{
-            var json = JSON.parse(resp);
-            if(json.length > 0) cc_deployed = true; // We should have at least one authorised garage
-          }
-        }
-      }
-      catch(e){}																		//anything nasty goes here
+/**
+ * @sets {caURL, certFile, chain.keyValStore, chain.MemberServicesUrl}
+ * @configures {keyValueStore, memberServicesUrl}
+ */
+var setupCertificates = function(){
 
-      // ---- Are We Ready? ---- //
-      if(!cc_deployed){
-        console.log('[preflight check]', attempt, ': failed, trying again');
-        setTimeout(function(){
-          check_if_deployed(null, ++attempt);										//no, try again later
-        }, 10000);
+  console.log("LOG: Setting Up Certificates");
+
+  /**
+   * Configure the KeyValStore which is used to store sensitive keys.
+   * This data needs to be located or accessible any time the users enrollmentID
+   * perform any functions on the blockchain.  The users are not usable without
+   * This data.
+   **/
+
+  console.log("KeyValStoreDestination: " + config.blockchain.keystorePath);
+
+  chain.setKeyValStore(hfc.newFileKeyValStore(config.blockchain.keystorePath));
+};
+
+
+var enrollDeployUser = function() {
+  return new Promise(function(resolve, reject){
+    var enrollmentId = config.blockchain.setup.deployUser.enrollmentId;
+    var enrollSecret = config.blockchain.setup.deployUser.enrollSecret;
+    console.log("LOG: Enrolling Deploy User: " + enrollmentId + " - " + enrollSecret);
+    chain.enroll(enrollmentId, enrollSecret, function(err, user){
+      if (err) {
+        console.log("Error enrolling deploy user...maybe already enrolled?");
+        console.error(err);
+        chain.getUser(enrollmentId, function (err, userFromGet) {
+          if (err) {
+            console.log("ERROR");
+            console.error(err);
+            throw Error ("\nError: failed to enroll deploy user " + enrollmentId + ": " + err);
+          } else {
+            deployUser = userFromGet;
+            resolve();
+          }
+        })
+      } else {
+        console.log("LOG: Enrolled New User: " + enrollmentId);
+        deployUser = user;
+        resolve();
       }
-      else{
-        console.log('[preflight check]', attempt, ': success');
-        //cb_deployed(null);															//yes, lets go!
+    })
+  });
+}
+/**
+ * Function to enroll the configured registrar
+ * @param user
+ */
+var enrollRegistrarUser = function(user){
+  return new Promise(function(resolve, reject){
+    console.log("LOG: Enrolling Registrar: " + user.enrollmentId + " - " + user.enrollSecret);
+    chain.enroll(user.enrollmentId, user.enrollSecret, function(err, registrarUser){
+      if (err) {
+        console.log("Error enrolling registrar...maybe already enrolled?");
+        console.error(err);
+        chain.getUser(user.enrollmentId, function (err, registrarUserFromGet) {
+          if (err) {
+            console.log("ERROR");
+            console.error(err);
+            throw Error ("\nError: failed to enroll registrar user " + user.enrollmentId + ": " + err);
+          }
+        })
+      } else {
+        console.log("LOG: Enrolled New User: " + user.enrollmentId);
+        resolve(registrarUser);
       }
+    })
+  });
+};
+
+var enrollNewUsers = function() {
+  var promises = [];
+
+  console.log("Enrolling new users");
+  usersConfig = config.blockchain.users;
+  for (var i = 0; i < usersConfig.length; i++) {
+    console.log("*** " + usersConfig[i].enrollmentId);
+    var user = {
+      "username": usersConfig[i].enrollmentId,
+      "affiliation": usersConfig[i].affiliation,
+      "attributes": usersConfig[i].attributes
+    };
+
+    promises.push(_enrollNewUser(user));
+  }
+
+  return Promise.all(promises);
+};
+
+/**
+ * Enrolls and Sets a Given Network User as the Registrar
+ * which is authorised to register other users
+ * Generally the Admin user (user[0])
+ * @param registeredUser
+ */
+var configureRegistrar = function(registrarUser){
+  console.log("LOG: Configuring Registrar User: " + registrarUser.name);
+  chain.setRegistrar(registrarUser);
+};
+
+var setupNetwork = function(){
+
+  configureNetworkChain();
+  setupCertificates();
+
+  if (config.blockchain.setup.shouldSetupUsers) {
+    return enrollRegistrarUser(config.blockchain.registrarUser)
+      .then(configureRegistrar)
+      .then(enrollNewUsers)
+      //.then(enrollDeployUser)
+      //.then(deployChaincode)
+      .then(function() {
+        console.log("Setup completed");
+      })
+      .catch(function (error) {
+        throw new Error("Failed to setup network: " + error)
+      });
+  }
+  
+  //return deployChaincode();
+
+};
+
+/**
+ * Enrolls a new user using provider (non-network user)
+ * @param username
+ * @param affiliation
+ * @param callback
+ */
+var _enrollNewUser = function(newUser){
+  console.log("LOG: enrolling, username: " + newUser.username + ", affiliation: " + newUser.affiliation);
+
+  var registrationRequest = {
+    enrollmentID: newUser.username,
+    //affiliation: newUser.affiliation
+    affiliation: "institution_a"
+  };
+
+  if (newUser.attributes) {
+    registrationRequest.attributes = newUser.attributes;
+  }
+
+  return new Promise(function(resolve, reject){
+    chain.registerAndEnroll(registrationRequest, function(err, user){
+
+      // Throw an error if user couldn't be registered
+      if (err) {
+        console.log("Unable to register user: " + err);
+        throw Error("Failed to register and enroll " + newUser.username + ": " + err );
+      }
+
+      /**
+       * Returns the user so that actions can be performed against them
+       */
+      console.log("LOG: Successfully enrolled User: " + user.name);
+      resolve(user);
     });
+  })
+};
+
+var deployChaincode = function() {
+  return new Promise(function(resolve, reject) {
+    if (!chaincodeId) {
+
+      console.log("LOG: Deploying Chaincode");
+      chain.setDeployWaitTime(config.blockchain.setup.deploy.waitTime);
+      var args = getArgs(config.blockchain.setup.deploy.args);
+      console.log(args);
+      // Construct the deploy request
+      var deployRequest = {
+        // Function to trigger
+        fcn: config.blockchain.setup.deploy.functionName,
+        // Arguments to the initializing function
+        args: args,
+        chaincodePath: config.blockchain.setup.deploy.chaincodePath
+      };
+
+      console.log("--- Deploy Request ---");
+      console.log(deployRequest);
+
+      // Trigger the deploy transaction
+      var deployTx = deployUser.deploy(deployRequest);
+
+      console.log("after deploy")
+      // Print the deploy results
+      deployTx.on('complete', function (results) {
+        // Deploy request completed successfully
+        chaincodeID = results.chaincodeID;
+        console.log("\nChaincode ID : " + chaincodeID);
+        console.log(util.format("\nSuccessfully deployed chaincode: request=%j, response=%j", deployRequest, results));
+        // Save the chaincodeID
+        fs.writeFileSync(chaincodeId, chaincodeID);
+        //invoke();
+        resolve(chaincodeId);
+      });
+
+      deployTx.on('error', function (err) {
+        // Deploy request failed
+        console.log(util.format("\nFailed to deploy chaincode: request=%j, error=%j", deployRequest, err));
+        process.exit(1);
+      });
+
+      deployTx.on('submitted', function (results) {
+        // Deploy request failed
+        chaincodeID = results.chaincodeID;
+        console.log("\nChaincode ID : " + chaincodeID);
+        console.log(util.format("\nSuccessfully submitted chaincode: request=%j, response=%j", deployRequest, results));
+        // Save the chaincodeID
+        fs.writeFileSync(chaincodeIdPath, chaincodeID);
+        //invoke();
+      });
+    } else {
+      console.log("LOG: Already deployed");
+      resolve();
+    }
+  });
+};
+
+var enrollNewUser = function(newUser){
+
+  if (!chain.getRegistrar()){
+    console.log("Registrar not set...enrolling");
+    return enrollRegistrarUser(config.blockchain.registrarUser)
+      .then(configureRegistrar)
+      .then(function(){
+        return newUser;
+      })
+      .then(_enrollNewUser)
+      .catch(function(error){
+        console.error(error);
+      });
+  } else {
+    return _enrollNewUser(newUser);
+  }
+};
+
+function getArgs(argsConfig) {
+  var args = [];
+  for (var i = 0; i < argsConfig.length; i++) {
+    args.push(argsConfig[i]);
+  }
+  return args;
+}
+
+function fileExists(filePath) {
+  try {
+    return fs.statSync(filePath).isFile();
+  } catch (err) {
+    return false;
   }
 }
 
-
-//Chaincode
-var chaincode = {
-  zip_url: "https://github.com/Capgemini-AIE/blockchain-insurance/archive/" + fullVersion + ".zip",
-  unzip_dir: "blockchain-insurance-" + fullVersion + "/chaincode/src/insurance_code/",
-  git_url: "http://gopkg.in/Capgemini-AIE/blockchain-insurance.v" + version.major +"/chaincode"
-};
-
-var loadCredentials = function(){
-
-  console.log("--- Loading Credentials ---");
-  if(process.env.VCAP_SERVICES){
-
-    console.log("--- VCAP EXISTS ---");
-
-    var servicesObject = JSON.parse(process.env.VCAP_SERVICES);
-    for (var i in servicesObject){
-
-      console.log("--- I ---");
-      console.log(i);
-
-      if(i.indexOf('ibm-blockchain') >= 0){													//looks close enough
-        console.log("Found ibm-blockchain");
-        if(servicesObject[i][0].credentials.error){
-          console.log('!\n!\n! Error from Bluemix: \n', servicesObject[i][0].credentials.error, '!\n!\n');
-          peers = null;
-          users = null;
-          process.error = {type: 'network', msg: 'Due to overwhelming demand the IBM Blockchain Network service is at maximum capacity.  Please try recreating this service at a later date.'};
-        }
-        if(servicesObject[i][0].credentials && servicesObject[i][0].credentials.peers){		//found the blob, copy it to 'peers'
-          console.log('overwritting peers, loading from a vcap service: ', i);
-          peers = servicesObject[i][0].credentials.peers;
-          if(servicesObject[i][0].credentials.users){										//user field may or maynot exist, depends on if there is membership services or not for the network
-            console.log('overwritting users, loading from a vcap service: ', i);
-            users = servicesObject[i][0].credentials.users;
-          }
-          else users = null;																//no security
-          break;
-        }
-      }
-    }
-  } else {
-
-    var manual = {};
-
-    var cloudCredentials = false;
-
-    try{
-      require.resolve('../../config/credentials/ibm_blockchain_credentials.json');
-      console.log("Using IBM Blockchain Credentials")
-      cloudCredentials = true;
-    } catch (e){
-      console.log("Using Docker Credentials");
-      cloudCredentials = false;
-    }
-
-    if (cloudCredentials){
-      console.log("-----ibm-----");
-      manual = require('../../config/credentials/ibm_blockchain_credentials.json');
-    } else {
-      console.log("-----docker-----");
-      manual = require('../../config/credentials/mycreds_docker_compose.json');
-    }
-
-
-
-    if (manual) {
-      if (manual.credentials.peers) {
-        peers = manual.credentials.peers;
-      }
-      if (manual.credentials.users) {
-        users = manual.credentials.users;
-      }
-
-      peers = manual.credentials.peers;
-      users = manual.credentials.users;
-    } else {
-      console.error("You do not have a local copy of ibm_blockchain_credentials, please ask an admin for this file");
-    }
-  }
-};
-
-var setOptions = function(){
-  options = {
-    network:{
-      peers: [peers[0]],
-      users: [users[0]],
-      options: {
-        quiet: true,
-        tls: detect_tls_or_not(peers),
-        maxRetry: 1
-      }
-    },
-    chaincode: chaincode
-  };
-};
-
-var sdkLoaded = function(err, cc){
-
-  if (err || !cc) {
-    console.log("There was an error loading the chaincode / network");
-    console.error(err);
-  } else {
-    console.log("There was no error loading the chaincode / network");
-    chaincode = cc;
-
-    // ---- To Deploy or Not to Deploy ---- //
-    if(!cc.details.deployed_name || cc.details.deployed_name === ''){
-      cc.deploy('init', ['99'], {delay_ms: 30000}, function(e){ 						// delay_ms is milliseconds to wait after deploy for conatiner to start, 50sec recommended
-        check_if_deployed(e, 1);
-      });
-    } else {
-      console.log('chaincode summary file indicates chaincode has been previously deployed');
-      check_if_deployed(null, 1);
-    }
-  }
-};
-
-var loadSDK = function(){
-  if(process.env.VCAP_SERVICES){
-    console.log('\n[!] looks like you are in bluemix, I am going to clear out the deploy_name so that it deploys new cc.\n[!] hope that is ok budddy\n');
-    options.chaincode.deployed_name = '';
-  };
-
-  if (options.chaincode) {
-
-    console.log("--- Options ---");
-    console.log(options);
-
-    ibc.load(options, sdkLoaded);
-  } else {
-    console.error("Didn't try load SDK because there is no valid chaincode");
-  }
-};
-
 module.exports = {
-  setup: function(){
-    loadCredentials();
-    setOptions();
-    loadSDK();
-  }
+  setupNetwork: setupNetwork,
+  enrollNewUser: enrollNewUser
 };

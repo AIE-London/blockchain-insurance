@@ -1,10 +1,114 @@
 {
   "blockchain": {
-    "peerAddress": "localhost:7051",
-    "memberssvcAddress": "localhost:7054",
-    "keystorePath": "/keyValStore",
+    "peerAddress": "services-uscentral.skytap.com:8549",
+    "memberssvcAddress": "services-uscentral.skytap.com:8447",
+    "keystorePath": "./keyValStore",
     "chaincodeId": "insurance",
-    "devMode": true
+    "devMode": true,
+    "registrarUser": {
+      "enrollmentId": "WebAppAdmin",
+      "enrollSecret": "DJY27pEnl16d"
+    },
+    "setup": {
+      "shouldSetupUsers": false,
+      "deploy": {
+        "waitTime": 5,
+        "functionName": "init",
+        "chaincodePath": "insurance_main",
+        "args": ["localhost:3000"]
+      },
+      "deployUser": {
+        "enrollmentId": "test_user4",
+        "enrollSecret": "4nXSrfoYGFCP"
+      }
+
+    },
+    "users": [
+      {
+        "enrollmentId": "claimant1",
+        "affiliation": "none",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "claimaint1"
+          },
+          {
+            "name": "role",
+            "value": "policyholder"
+          }
+        ]
+      },
+      {
+        "enrollmentId": "claimant2",
+        "affiliation": "none",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "claimaint2"
+          },
+          {
+            "name": "role",
+            "value": "poicyholder"
+          }
+        ]
+      },
+      {
+        "enrollmentId": "insurer1",
+        "affiliation": "zurich",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "insurer1"
+          },
+          {
+            "name": "role",
+            "value": "insurer"
+          }
+        ]
+      },
+      {
+        "enrollmentId": "insurer2",
+        "affiliation": "admiral",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "insurer2"
+          },
+          {
+            "name": "role",
+            "value": "insurer"
+          }
+        ]
+      },
+      {
+        "enrollmentId": "garage1",
+        "affiliation": "Aber Garage",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "garage1"
+          },
+          {
+            "name": "role",
+            "value": "garage"
+          }
+        ]
+      },
+      {
+        "enrollmentId": "garage2",
+        "affiliation": "Tillery Garage",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "garage2"
+          },
+          {
+            "name": "role",
+            "value": "garage"
+          }
+        ]
+      }
+    ]
   },
   "database": {
     "cloudant": {
