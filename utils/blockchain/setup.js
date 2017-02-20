@@ -29,7 +29,7 @@ var deployUser;
 var PEER_ADDRESS = config.blockchain.peerAddress;
 var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
 
-var KEYSTORE_PATH = config.blockchain.keystorePath;
+var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 
 /** FUNCTIONS **/
 
@@ -74,9 +74,9 @@ var setupCertificates = function(){
    * This data.
    **/
 
-  console.log("KeyValStoreDestination: " + config.blockchain.keystorePath);
+  console.log("KeyValStoreDestination: " + KEYSTORE_PATH);
 
-  chain.setKeyValStore(hfc.newFileKeyValStore(config.blockchain.keystorePath));
+  chain.setKeyValStore(hfc.newFileKeyValStore(KEYSTORE_PATH));
 };
 
 
