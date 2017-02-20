@@ -120,6 +120,9 @@ var query = function(functionName, args, user, callback){
     args: args
   };
 
+  console.log("-- Query Request --");
+  console.log(queryRequest);
+
   var tx = user.query(queryRequest);
 
   tx.on('submitted', function(results) {
