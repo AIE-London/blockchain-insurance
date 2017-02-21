@@ -1,10 +1,10 @@
 {
   "blockchain": {
-    "peerAddress": "services-uscentral.skytap.com:8549",
+    "peerAddress": "services-uscentral.skytap.com:8551",
     "memberssvcAddress": "services-uscentral.skytap.com:8447",
     "keystorePath": "/keyValStore",
-    "chaincodeId": "insurance",
-    "devMode": true,
+    "chaincodeId": "ce7b63366332efdef4a314e1d3320ade00dfd59ac926c4a19be6aea47e817c791bb8888714ef15ce624fef75b1a0cf892928297a3056418ba05fb5e199f7c0f9",
+    "devMode": false,
     "registrarUser": {
       "enrollmentId": "WebAppAdmin",
       "enrollSecret": "DJY27pEnl16d"
@@ -26,7 +26,7 @@
     "users": [
       {
         "enrollmentId": "claimant1",
-        "affiliation": "none",
+        "affiliation": "institution_a",
         "attributes": [
           {
             "name": "username",
@@ -40,7 +40,7 @@
       },
       {
         "enrollmentId": "claimant2",
-        "affiliation": "none",
+        "affiliation": "institution_a",
         "attributes": [
           {
             "name": "username",
@@ -54,7 +54,7 @@
       },
       {
         "enrollmentId": "insurer1",
-        "affiliation": "zurich",
+        "affiliation": "institution_a",
         "attributes": [
           {
             "name": "username",
@@ -68,7 +68,7 @@
       },
       {
         "enrollmentId": "insurer2",
-        "affiliation": "admiral",
+        "affiliation": "institution_a",
         "attributes": [
           {
             "name": "username",
@@ -82,7 +82,7 @@
       },
       {
         "enrollmentId": "garage1",
-        "affiliation": "Aber Garage",
+        "affiliation": "institution_a",
         "attributes": [
           {
             "name": "username",
@@ -96,7 +96,7 @@
       },
       {
         "enrollmentId": "garage2",
-        "affiliation": "Tillery Garage",
+        "affiliation": "institution_a",
         "attributes": [
           {
             "name": "username",
@@ -105,6 +105,20 @@
           {
             "name": "role",
             "value": "garage"
+          }
+        ]
+      },
+      {
+        "enrollmentId": "superuser",
+        "affiliation": "institution_a",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "superuser"
+          },
+          {
+            "name": "role",
+            "value": "superuser"
           }
         ]
       }
@@ -144,8 +158,8 @@
     "http://localhost:3001",
     "https://localhost:8080",
     "http://localhost:8080",
-    "http://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net",
-    "https://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net"
+    "http://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net/",
+    "https://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net/"
   ],
   "app": {
     "paths": {
