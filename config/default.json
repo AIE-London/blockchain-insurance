@@ -9,6 +9,7 @@
       "enrollmentId": "WebAppAdmin",
       "enrollSecret": "DJY27pEnl16d"
     },
+    "oracleUser" : "oracle",
     "setup": {
       "shouldSetupUsers": false,
       "deploy": {
@@ -119,6 +120,20 @@
           {
             "name": "role",
             "value": "superuser"
+          }
+        ]
+      },
+      {
+        "enrollmentId": "oracle",
+        "affiliation": "institution_a",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "oracle"
+          },
+          {
+            "name": "role",
+            "value": "oracle"
           }
         ]
       }
