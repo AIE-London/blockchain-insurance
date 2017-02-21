@@ -50,7 +50,7 @@ var login = function(name, secret, callback){
 var loginAndInvoke = function(functionName, args, username, callback) {
 
   console.log("Enrolling");
-  chain.enroll(username, "", function (err, user) { // No Token Needed As We Expect to User to Already Be Enrolled
+  chain.enroll(username, "", function (err, user) { // No Token Needed As We Expect to User to Already Be Registered
     if (err) {
       console.error(err);
       console.log("Attemping to get user");
@@ -102,7 +102,7 @@ var invoke = function(functionName, args, user, callback) {
 };
 
 var loginAndQuery = function(funcionName, args, username, callback){
-  login(username, "", function(user){ // No Token Needed As We Expect to User to Already Be Enrolled
+  login(username, "", function(user){ // No Token Needed As We Expect to User to Already Be Registered
     console.log("--- USER ---");
     console.log(user);
     if (user.error){

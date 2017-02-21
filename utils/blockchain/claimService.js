@@ -11,7 +11,12 @@ var getFullHistory = function(username, callback){
   blockchainService.query("retrieveAllClaims", [], username, callback);
 };
 
+var makeClaimAgreement = function(claimId, agreement, callback){
+  blockchainService.invoke("agreePayoutAmount", [claimId, agreement], callback);
+};
+
 module.exports = {
   raiseClaim: raiseClaim,
-  getFullHistory: getFullHistory
+  getFullHistory: getFullHistory,
+  makeClaimAgreement: makeClaimAgreement
 };
