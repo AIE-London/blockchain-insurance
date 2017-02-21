@@ -269,7 +269,7 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  *         in: path
  *         type: string
  *         required: true,
- *         - name: claimId
+ *       - name: claimId
  *         description: Id of the claim
  *         in: path
  *         type: string
@@ -363,6 +363,25 @@ app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.pos
   });
 });
 
+/**
+ * @swagger
+ * /caller/{username}/history/claims/all:
+ *   post:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Getting all claims authorised for the user
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username of the person submitting the report
+ *         in: path
+ *         type: string
+ *         required: true,
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
 app.get('/caller/:username/history/claims/all', auth.checkAuthorized, function(request, response){
 
   var username = request.params.username;
