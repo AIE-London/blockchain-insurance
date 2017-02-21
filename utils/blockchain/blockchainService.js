@@ -47,10 +47,10 @@ var login = function(name, secret, callback){
   });
 };
 
-var loginAndInvoke = function(functionName, args, callback) {
+var loginAndInvoke = function(functionName, args, username, callback) {
 
   console.log("Enrolling");
-  chain.enroll("lukas", "NPKYL39uKbkj", function (err, user) {
+  chain.enroll(username, "", function (err, user) { // No Token Needed As We Expect to User to Already Be Enrolled
     if (err) {
       console.error(err);
       console.log("Attemping to get user");
@@ -102,7 +102,7 @@ var invoke = function(functionName, args, user, callback) {
 };
 
 var loginAndQuery = function(funcionName, args, username, callback){
-  login(username, "", function(user){ // No Token Needed As We Expect to User to Already Be Registered
+  login(username, "", function(user){ // No Token Needed As We Expect to User to Already Be Enrolled
     console.log("--- USER ---");
     console.log(user);
     if (user.error){
@@ -143,8 +143,8 @@ var query = function(functionName, args, user, callback){
 
 
 module.exports = {
-  invoke: function(functionName, args, callback){
-    loginAndInvoke(functionName, args, callback);
+  invoke: function(functionName, args, username, callback){
+    loginAndInvoke(functionName, args, username, callback);
   },
   query: function(functionName, args, username, callback){
     loginAndQuery(functionName, args, username, callback);

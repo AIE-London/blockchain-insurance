@@ -136,7 +136,10 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
   var password = request.body.password;
 
   userService.authenticate(username, password, function(rsp){
-    if(rsp.details && rsp.details.carInsurance && rsp.details.carInsurance.type === "claimant"){
+    console.log("--- response ---");
+    console.log(response.details);
+
+    if(rsp.details && rsp.details.carInsurance){//Add following to restrict to claimant: && rsp.details.carInsurance.type === "claimant"){
       auth.signJWT(request.body, {secret:"123", name: username}, function(resp){
         console.log(resp);
         if(resp){
@@ -226,7 +229,7 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
 
   var responseBody = {};
 
-  claimService.raiseClaim(request.body, function(res){
+  claimService.raiseClaim(request.body, request.params.username, function(res){
     if (res.error){
       responseBody.error = res.error;
       response.statusCode = 500;
@@ -276,11 +279,11 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  *       200:
  *         description: Successful
  */
-app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), function(request, response){
+app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), auth.checkAuthorized, function(request, response){
 
   var responseBody = {};
 
-  garageService.addGarageReport(request.body, function(res){
+  garageService.addGarageReport(request.body, request.params.username, function(res){
 
     if (res.error){
       responseBody.error = res.error;
