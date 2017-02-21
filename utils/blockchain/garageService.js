@@ -1,4 +1,4 @@
-var blockchainInvoke = require('./invokeService');
+var blockchainInvoke = require('./blockchainService');
 var config = require('config');
 
 var addGarageReport = function(garageReport, callback){

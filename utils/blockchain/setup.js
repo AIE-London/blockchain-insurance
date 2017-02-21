@@ -28,7 +28,7 @@ var network = {};
 var deployUser;
 var PEER_ADDRESS = config.blockchain.peerAddress;
 var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
-
+var API_KEY_PATH = appDir + "/config/credentials/.edmund-api-key";
 var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 
 /** FUNCTIONS **/
@@ -37,6 +37,16 @@ var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
  * @sets {chain, network}
  */
 var configureNetworkChain = function(){
+
+  var apiKey = "";
+  try{
+    apiKey = fs.readFileSync(API_KEY_PATH, 'utf8');
+    console.log("Logging API KEY");
+    console.log(apiKey); // TODO REMOVE
+    process.env.EDMUNDS_API_KEY = apiKey;
+  } catch(e){
+    console.error("Could not load API Key: ", e);
+  }
 
   if (fileExists(chaincodeIdPath)) {
     chaincodeId = fs.readFileSync(chaincodeIdPath, 'utf8');
@@ -167,7 +177,7 @@ var setupNetwork = function(){
 
   configureNetworkChain();
   setupCertificates();
-
+  console.log("Completed setupCertificates");
   if (config.blockchain.setup.shouldSetupUsers) {
     return enrollRegistrarUser(config.blockchain.registrarUser)
       .then(configureRegistrar)

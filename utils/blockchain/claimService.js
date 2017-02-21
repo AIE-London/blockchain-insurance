@@ -1,12 +1,17 @@
-var blockchainInvoke = require('./invokeService');
+var blockchainService = require('./blockchainService');
 var config = require('config');
 
 var raiseClaim = function(claim, callback){
   // We can be assured the claim has the relevant fields because of schema validaiton ont he endpoint
   var args = [claim.relatedPolicy, claim.description, claim.incidentDate, claim.type];
-  blockchainInvoke.invoke("createClaim", args, callback);
+  blockchainService.invoke("createClaim", args, callback);
+};
+
+var getFullHistory = function(callback){
+  blockchainService.query("retrieveAllClaims", [], callback);
 };
 
 module.exports = {
-  raiseClaim: raiseClaim
+  raiseClaim: raiseClaim,
+  getFullHistory: getFullHistory
 };

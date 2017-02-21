@@ -93,6 +93,8 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 		return t.addGarageReport(stub, caller, caller_affiliation, args)
 	} else if function == "confirmWork" {
 		//TODO
+	} else if function == "agreePayoutAmount" {
+		return t.agreePayoutAmount(stub, caller, caller_affiliation, args)
 	} else if function == "vehicleValueOracleCallback" {
 		fmt.Printf("vehicleValueOracleCallback: ReqeustId / Value" + args[0] + " / " + args[1]);
 		return nil, t.vehicleValueOracleCallback(stub, args)
@@ -293,7 +295,6 @@ func (t *InsuranceChaincode) retrieveAllPoliciesJSON(stub shim.ChaincodeStubInte
 	numberOfPolicies := t.getCurrentPolicyIdNumber(stub)
 
 	result := "["
-	fmt.Printf("in retrieveAllPoliciesJSON")
 
 	for i := 1; i <= numberOfPolicies; i++ {
 
@@ -693,7 +694,7 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface, c
 
 	var report ClaimDetailsClaimGarageReport
 	report, err = NewGarageReport(caller, args[1], args[2], args[3])
-	theClaim.Details.Repair = report
+	theClaim.Details.Report = report
 
 	theClaim.Details.Status = STATE_PENDING_AFTER_REPORT_DECISION
 
@@ -745,7 +746,7 @@ func (t *InsuranceChaincode) afterVehicleValueObtainedProcess(stub shim.Chaincod
 	
 	if theClaim.Details.Status == STATE_PENDING_AFTER_REPORT_DECISION{
 
-		if theClaim.Details.Repair.WriteOff || theClaim.Details.Repair.Estimate > (vehicleValue * 50 / 100) {
+		if theClaim.Details.Report.WriteOff || theClaim.Details.Report.Estimate > (vehicleValue * 50 / 100) {
 			//process total_loss
 			t.processTotalLoss(stub, theClaim, vehicleValue)
 		}else{
@@ -768,11 +769,76 @@ func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface, 
 		settlement.Decision = TOTAL_LOSS
 		settlement.Dispute = false
 		theClaim.Details.Settlement = settlement
-		theClaim.Details.Status = STATE_TOTAL_LOSS_ESTABLISHED
+
+		//theClaim.Details.Status = STATE_TOTAL_LOSS_ESTABLISHED
+		theClaim.Details.Status = STATE_AWAITING_CLAIMANT_CONFIRMATION
 		theClaim.Details.Settlement.TotalLoss.CarValueEstimate = vehicleValue
 		t.saveClaim(stub, theClaim)
 	}else {fmt.Printf("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim\n"); return nil, errors.New("PROCESS_TOTAL_LOSS: Error can not process Total loss on unexisting claim") }
 	return nil, nil
+}
+
+//=========================================================================================
+// This Function set the claimant aggreement in the payout
+//=========================================================================================
+func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
+	fmt.Println("running agreePayoutAmount()")
+
+    //
+	//TODO - Check the Security  check that this claimant has the rith to update this claim
+	//
+	if len(args) != 2 {
+		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+	}
+
+    var theClaim Claim
+
+	theClaim, err := t.retrieveClaim(stub , args[0])
+
+	if err != nil {	fmt.Printf("\nAGREE_PAYOUT_AMOUNT: Failed to retrieve claim Id: %s", err); return nil, errors.New("AGREE_PAYOUT_AMOUNT: Error retrieving claim with claimId = " + args[0]) }
+
+	if theClaim.Details.Status != STATE_AWAITING_CLAIMANT_CONFIRMATION{
+		fmt.Println("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+		return nil, errors.New("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+	}
+
+	var acceptDeny bool
+	acceptDeny, err = strconv.ParseBool(args[1])
+	if err != nil {fmt.Printf("AGREE_PAYOUT_AMOUNT Error: invalid value passed for agreement: %s\n", err); return nil, errors.New("Invalid value passed for agreement")}
+
+	if acceptDeny {
+		theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue = theClaim.Details.Settlement.TotalLoss.CarValueEstimate
+		theClaim.Details.Status = STATE_SETTLED
+	} else {
+		theClaim.Details.Settlement.Dispute = true
+	}
+	t.saveClaim(stub, theClaim)
+
+	return nil, nil
+}
+
+
+//===============================================================================
+// This method saves the claim after updates
+//===============================================================================
+func (t *InsuranceChaincode) isApprovedGarage(stub shim.ChaincodeStubInterface, garage string) bool {
+
+	var approvedGarages ApprovedGarages
+
+	bytes, err := stub.GetState(APPROVED_GARAGES_KEY)
+	if err != nil {	fmt.Printf("IS_APPROVED_GARAGE: Failed to check the garage: %s", err); return false }
+
+	err = json.Unmarshal(bytes, &approvedGarages)
+	if err != nil {	fmt.Printf("IS_APPROVED_GARAGE: Corrupt garages record "+string(bytes)+": %s", err); return false}
+
+    for _, appGarage := range approvedGarages.Garages {
+		fmt.Printf("Approved Garage: %s\n", appGarage)
+        if appGarage == garage {
+            return true
+        }
+    }
+    return false
 }
 
 //===============================================================================
