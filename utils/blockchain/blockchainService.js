@@ -56,7 +56,7 @@ var loginAndInvoke = function(functionName, args, username, callback) {
       console.error(err);
       console.log("Attemping to get user");
 
-      chain.getUser("lukas", function (err, userViaGet) {
+      chain.getUser(username, function (err, userViaGet) {
         if (err) {
           console.error(err);
           callback(err);
