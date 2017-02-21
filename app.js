@@ -185,7 +185,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
  *       200:
  *         description: Successful
  */
-app.get('/' + apiPath.base + '/test/:username', function(request, response){
+app.get('/' + apiPath.base + '/test/:username', auth.checkAuthorized, function(request, response){
 	var responseBody = {};
 
   blockchainSetup.setup();
@@ -222,7 +222,7 @@ app.get('/' + apiPath.base + '/test/:username', function(request, response){
  *       200:
  *         description: Successful
  */
-app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema}), function(request, response){
+app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema}), auth.checkAuthorized, function(request, response){
 
   var responseBody = {};
 
@@ -301,7 +301,7 @@ app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.pos
   });
 });
 
-app.get('/caller/:username/history/claims/all', function(request, response){
+app.get('/caller/:username/history/claims/all', auth.checkAuthorized, function(request, response){
 
   var username = request.params.username;
 
