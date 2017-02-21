@@ -305,7 +305,7 @@ app.get('/caller/:username/history/claims/all', function(request, response){
 
   var responseBody = {};
 
-  claimService.getFullHistory(function(res){
+  claimService.getFullHistory(request.params.username, function(res){
 
     if (res.error){
       responseBody.error = res.error;

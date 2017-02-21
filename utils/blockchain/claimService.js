@@ -7,8 +7,8 @@ var raiseClaim = function(claim, callback){
   blockchainService.invoke("createClaim", args, callback);
 };
 
-var getFullHistory = function(callback){
-  blockchainService.query("retrieveAllClaims", [], callback);
+var getFullHistory = function(username, callback){
+  blockchainService.query("retrieveAllClaims", [], username, callback);
 };
 
 module.exports = {

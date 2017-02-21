@@ -101,8 +101,8 @@ var invoke = function(functionName, args, user, callback) {
   });
 };
 
-var loginAndQuery = function(funcionName, args, callback){
-  login("lukas", "NPKYL39uKbkj", function(user){
+var loginAndQuery = function(funcionName, args, username, callback){
+  login(username, "", function(user){ // No Token Needed As We Expect to User to Already Be Registered
     console.log("--- USER ---");
     console.log(user);
     if (user.error){
@@ -146,7 +146,7 @@ module.exports = {
   invoke: function(functionName, args, callback){
     loginAndInvoke(functionName, args, callback);
   },
-  query: function(functionName, args, callback){
-    loginAndQuery(functionName, args, callback);
+  query: function(functionName, args, username, callback){
+    loginAndQuery(functionName, args, username, callback);
   }
 };
