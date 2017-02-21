@@ -311,7 +311,7 @@ app.get('/caller/:username/history/claims/all', function(request, response){
       responseBody.error = res.error;
       response.statusCode = 500;
     } else if (res.results){
-      responseBody.results = res.results;
+      responseBody.results = JSON.parse(res.results);
       response.statusCode = 200;
     } else {
       responseBody.error = "unknown issue";
