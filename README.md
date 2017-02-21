@@ -22,6 +22,52 @@ docker-compose -f four-peer-ca.yaml up -d
 
 To test it is up and running properly hit [http://localhost:7050/chain](http://localhost:7050/chain)
 
+### Configuring users in local (dev mode) docker instance
+
+Execute the following commands after running docker-compose (from the docker-compose folder)
+
+```
+docker cp memberssvc/membersrvc.yaml dockercompose_membersrvc_1:/opt/gopath/src/github.com/hyperledger/fabric/membersrvc
+docker exec -i -t dockercompose_membersrvc_1 /bin/bash
+rm -rf /var/hyperledger/production
+exit
+docker restart dockercompose_membersrvc_1
+```
+
+7 users will then be created:
+
+```
+claimant1
+claimant2
+garage1
+garage2
+insurer1
+insurer2
+superuser
+```
+
+In order for the correct username/role to be established within the chaincode (in dev mode), an attributes
+value has to be added to the REST request.  Example:
+
+```
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "query",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "retrieveAllPolicies"
+         },
+         "secureContext": "claimant2",
+				 "attributes": ["username","claimant2","role","policyholder"]
+     },
+     "id": 4
+ }' http://localhost:7050/chaincode
+```
+
 ### Deploying chaincode for development (Only currently working in the 4 peer environment)
 
 To run chaincode locally without having to deploy from a github url:
