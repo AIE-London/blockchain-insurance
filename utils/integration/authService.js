@@ -28,7 +28,7 @@ module.exports = {
       }
     });
   },
-  verifyJWT: function (data, options, callback) {
+  verifyJWT: function (data, options, callback, username) {
     var requestData = {};
     requestData.token = data;
     requestData.secret = options.secret;
@@ -37,7 +37,7 @@ module.exports = {
       method: "POST",
       json: requestData
     }, function (error, response, body) {
-      if(response.statusCode == 200){
+      if(response.statusCode == 200 && body.username === username){
         callback(true);
       }
       else{
@@ -73,7 +73,7 @@ module.exports = {
           response.end();
           return;
         }
-      });
+      }, auth.name);
     }
   },
   allowOriginsMiddleware: function(req, res, next) {

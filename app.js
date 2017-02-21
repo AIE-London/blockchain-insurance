@@ -81,7 +81,7 @@ var bodyParser = require('body-parser');
 var apiPath = config.app.paths.api;
 
 // All Environments
-// app.set('port', process.env.PORT || 3000);
+ app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.engine('html', require('ejs').renderFile);
@@ -302,6 +302,8 @@ app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.pos
 });
 
 app.get('/caller/:username/history/claims/all', function(request, response){
+
+  var username = request.params.username;
 
   var responseBody = {};
 
