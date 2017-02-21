@@ -323,11 +323,6 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
  *         in: path
  *         type: string
  *         required: true,
- *       - name: garageReport
- *         description: the garage report
- *         in: path
- *         type: string
- *         required: true,
  *       - name: post-garage-report-schema
  *         description: claim content
  *         in: body
@@ -338,11 +333,19 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
  *       200:
  *         description: Successful
  */
-app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), auth.checkAuthorized, function(request, response){
+app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSchemas}), auth.checkAuthorized, function(request, response){
 
   var responseBody = {};
 
-  garageService.addGarageReport(request.body, request.params.username, function(res){
+  var args = request.body;
+  if (!args.notes){
+    args.notes = "none";
+  }
+  if (!args.writeOff){
+    args.writeOff = false;
+  }
+
+  garageService.addGarageReport(args, request.params.username, function(res){
 
     if (res.error){
       responseBody.error = res.error;
