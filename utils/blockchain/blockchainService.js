@@ -5,6 +5,7 @@ var PEER_ADDRESS = config.blockchain.peerAddress;
 var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
 var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 var CHAINCODE_ID  = config.blockchain.chaincodeId;
+var ATTRS = ['username', 'role'];
 
 var chain = hfc.newChain("insurance");
 
@@ -78,7 +79,8 @@ var invoke = function(functionName, args, user, callback) {
     // Function to trigger
     fcn: functionName,
     // Parameters for the invoke function
-    args: args
+    args: args,
+    attrs: ATTRS
   };
 
   console.log("Invoke request: " + JSON.stringify(invokeRequest));
@@ -117,7 +119,8 @@ var query = function(functionName, args, user, callback){
   var queryRequest = {
     chaincodeID: CHAINCODE_ID,
     fcn: functionName,
-    args: args
+    args: args,
+    attrs: ATTRS
   };
 
   console.log("QUERY REQUEST: " + JSON.stringify(queryRequest));
