@@ -30,7 +30,7 @@
         "attributes": [
           {
             "name": "username",
-            "value": "claimaint1"
+            "value": "claimant1"
           },
           {
             "name": "role",
@@ -44,11 +44,11 @@
         "attributes": [
           {
             "name": "username",
-            "value": "claimaint2"
+            "value": "claimant2"
           },
           {
             "name": "role",
-            "value": "poicyholder"
+            "value": "policyholder"
           }
         ]
       },
