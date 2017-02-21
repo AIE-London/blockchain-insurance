@@ -688,7 +688,7 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface, c
 
 	if err != nil {	fmt.Printf("\nADD_GARAGE_REPORT: Failed to retrieve claim Id: %s", err); return nil, errors.New("ADD_GARAGE_REPORT: Error retrieving claim with claimId = " + claimId) }
 
-	if !t.shouldAcceptGarageReportForClaim(theClaim, caller, caller_affiliation) {
+	if !t.shouldAcceptGarageReportForClaim(stub, theClaim, caller, caller_affiliation) {
 		return nil, errors.New("ADD_GARAGE_REPORT: Invalid. Affilliation: " + caller_affiliation + ", status:" + theClaim.Details.Status)
 	}
 
@@ -705,7 +705,7 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface, c
 	return nil, nil
 }
 
-func (t *InsuranceChaincode) shouldAcceptGarageReportForClaim(claim Claim, caller string, caller_affiliation string) (bool) {
+func (t *InsuranceChaincode) shouldAcceptGarageReportForClaim(stub shim.ChaincodeStubInterface, claim Claim, caller string, caller_affiliation string) (bool) {
 	//Super user can do anything
 	if caller_affiliation == ROLE_SUPER_USER { return true }
 
@@ -721,7 +721,13 @@ func (t *InsuranceChaincode) shouldAcceptGarageReportForClaim(claim Claim, calle
 		return false
 	}
 
-	return true;
+	//Is the garage an approved garage?
+	if !t.isApprovedGarage(stub, caller) {
+		fmt.Printf("ADD_GARAGE_REPORT: Garage is not approved: %s\n", caller)
+		return false
+	}
+
+	return true
 }
 
 //=========================================================================================
