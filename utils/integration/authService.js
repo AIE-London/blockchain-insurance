@@ -78,7 +78,7 @@ module.exports = {
     }
   },
   checkAuthorized: function (req, response, next) {
-    if (req.user === req.params.username) {
+    if (req.user === req.params.username || (req.method.toUpperCase() === 'OPTIONS') || (origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')) {
       next();
     } else {
       response.setHeader('Content-Type', 'application/json');
