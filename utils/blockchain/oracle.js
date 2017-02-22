@@ -24,7 +24,7 @@ var callbackVehicleValuationToChaincode = function(requestId, callbackFunctionNa
 };
 
 var callbackToChaincode = function(callbackFunctionName, args, callback) {
-  blockchainInvoke.invoke(callbackFunctionName, args, callback);
+  blockchainInvoke.invoke(callbackFunctionName, args, config.blockchain.oracleUser, callback);
 };
 
 module.exports = {

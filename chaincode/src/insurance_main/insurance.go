@@ -47,6 +47,15 @@ const   POLICY_ID_PREFIX	= "P"
 const	USER_ID_PREFIX		= "U"
 const   CLAIM_ID_PREFIX		= "C"
 
+//==============================================================================================================================
+//	 Roles within the system
+//==============================================================================================================================
+const   ROLE_POLICY_HOLDER	= "policyholder"
+const	ROLE_GARAGE			= "garage"
+const   ROLE_INSURER		= "insurer"
+const   ROLE_SUPER_USER		= "superuser"
+const   ROLE_ORACLE			= "oracle"
+
 func main() {
 	err := shim.Start(new(InsuranceChaincode))
 	if err != nil {
@@ -86,10 +95,10 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 	} else if function == "confirmWork" {
 		//TODO
 	} else if function == "agreePayoutAmount" {
-		return t.agreePayoutAmount(stub, caller, caller_affiliation, args)		
+		return t.agreePayoutAmount(stub, caller, caller_affiliation, args)
 	} else if function == "vehicleValueOracleCallback" {
 		fmt.Printf("vehicleValueOracleCallback: ReqeustId / Value" + args[0] + " / " + args[1]);
-		return nil, t.vehicleValueOracleCallback(stub, args)
+		return nil, t.vehicleValueOracleCallback(stub, caller, caller_affiliation, args)
 	} else if function == "approvePaymentOut" {
 		return t.approvePaymentOut(stub, caller, caller_affiliation, args)
 	} 
@@ -293,13 +302,19 @@ func (t *InsuranceChaincode) retrieveAllPoliciesJSON(stub shim.ChaincodeStubInte
 	for i := 1; i <= numberOfPolicies; i++ {
 
 		policyId := POLICY_ID_PREFIX + strconv.Itoa(i)
-		policyJSON, err := t.retrievePolicyJSON(stub, policyId)
 
-		//TODO Check caller has rights to see this policy
-		if err != nil {
-			fmt.Printf("retrievePolicies: Cannot retrieve policy with id " + policyId+": %s", err)
-		} else {
-			result += string(policyJSON) + ","
+		policy, err := t.retrievePolicy(stub, policyId)
+
+		if (err == nil) {
+			if t.isPolicyRelevantToCaller(stub, policy, caller, caller_affiliation) {
+				policyJSON, err := t.retrievePolicyJSON(stub, policyId)
+
+				if err != nil {
+					fmt.Printf("retrievePolicies: Cannot retrieve policy with id " + policyId + ": %s", err)
+				} else {
+					result += string(policyJSON) + ","
+				}
+			}
 		}
 	}
 
@@ -345,6 +360,23 @@ func (t *InsuranceChaincode) retrievePolicyJSON(stub shim.ChaincodeStubInterface
 }
 
 //==============================================================================================================================
+//	 isPolicyRelevantToCaller - Checks if a policy is relevant to the caller
+//==============================================================================================================================
+func (t *InsuranceChaincode) isPolicyRelevantToCaller(stub shim.ChaincodeStubInterface, policy Policy, caller string, caller_affiliation string) (bool){
+	//Super user can see everything
+	if caller_affiliation == ROLE_SUPER_USER { return true }
+
+	//Should associate policy with insurer but for now, allow it
+	if caller_affiliation == ROLE_INSURER { return true }
+
+	//Is policy owned by caller?
+	if caller == policy.Relations.Owner {fmt.Printf("Policy owner and caller match, policy is relevant"); return true}
+
+	fmt.Printf("Policy owner and caller do not match, policy is not relevant")
+	return false
+}
+
+//==============================================================================================================================
 //	 retrieveAllClaimsJSON - Iterates through all claim ids, retreiving each and returning a JSON representation
 //==============================================================================================================================
 func (t *InsuranceChaincode) retrieveAllClaimsJSON(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string) ([]byte, error) {
@@ -355,13 +387,20 @@ func (t *InsuranceChaincode) retrieveAllClaimsJSON(stub shim.ChaincodeStubInterf
 	for i := 1; i <= numberOfClaims; i++ {
 
 		claimId := CLAIM_ID_PREFIX + strconv.Itoa(i)
-		claimJSON, err := t.retrieveClaimJSON(stub, claimId)
 
-		//TODO Check caller has rights to see this claim
-		if err != nil {
-			fmt.Printf("retrieveAllClaims: Cannot retrieve claim with id " + claimId+": %s", err)
-		} else {
-			result += string(claimJSON) + ","
+		claim, err := t.retrieveClaim(stub, claimId)
+
+		if (err == nil) {
+			if t.isClaimRelevantToCaller(stub, claim, caller, caller_affiliation) {
+
+				claimJSON, err := t.retrieveClaimJSON(stub, claimId)
+
+				if err != nil {
+					fmt.Printf("retrieveAllClaims: Cannot retrieve claim with id " + claimId + ": %s", err)
+				} else {
+					result += string(claimJSON) + ","
+				}
+			}
 		}
 	}
 
@@ -372,6 +411,42 @@ func (t *InsuranceChaincode) retrieveAllClaimsJSON(stub shim.ChaincodeStubInterf
 	}
 
 	return []byte(result), nil
+}
+
+//==============================================================================================================================
+//	 isClaimRelevantToCaller - Checks is a claim is relevant to the caller
+//==============================================================================================================================
+func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInterface, claim Claim, caller string, caller_affiliation string) (bool){
+	//Super user can see everything
+	if caller_affiliation == ROLE_SUPER_USER { return true }
+
+	//Should associate policy with insurer but for now, allow it
+	if caller_affiliation == ROLE_INSURER { return true }
+
+	//Garage checks
+	if caller_affiliation == ROLE_GARAGE {
+		//Is claim awaiting a report?
+		if claim.Details.Status == STATE_AWAITING_GARAGE_REPORT {
+			{fmt.Printf("Awaiting garage report and the caller is a garage, claim is relevant"); return true}
+		} else {
+			//Is claim awaiting garage work and the garage submitted the report?
+			if claim.Details.Status == STATE_AWAITING_GARAGE_WORK_CONFIRMATION &&
+				claim.Details.Repair.Garage == caller {
+				{fmt.Printf("Awaiting garage work and garage raised report, claim is relevant"); return true}
+			} else {
+				{fmt.Printf("Garage has not link to claim or incorrect state, claim is not relevant"); return false}
+			}
+		}
+	}
+
+	//Is claim policy owned by caller?
+	policy, err := t.retrievePolicy(stub, claim.Relations.RelatedPolicy)
+	if err != nil {fmt.Printf("Invalid policy, claim is not relevant"); return false}
+
+	if caller == policy.Relations.Owner {fmt.Printf("Policy owner and caller match, claim is relevant"); return true}
+
+	fmt.Printf("Policy owner and caller don't match, claim is not relevant")
+	return false
 }
 
 //==============================================================================================================================
@@ -439,10 +514,24 @@ func (t *InsuranceChaincode) retrieveVehicleJSON(stub shim.ChaincodeStubInterfac
 }
 
 //==============================================================================================================================
-//	 vehicleValueCallback - Callback, called by an oracle when a vehicle value has been retreived
+//	 vehicleValueOracleCallback - Callback, called by an oracle when a vehicle value has been retreived
 //		args - requestId, vehicleValue
 //==============================================================================================================================
-func (t *InsuranceChaincode) vehicleValueOracleCallback(stub shim.ChaincodeStubInterface, args []string) (error) {
+func (t *InsuranceChaincode) vehicleValueOracleCallback(stub shim.ChaincodeStubInterface, caller string, callerAffiliation string, args []string) (error) {
+
+	if callerAffiliation != ROLE_ORACLE {
+		fmt.Printf("vehicleValueCallback: Called from non oracle user")
+		return errors.New("vehicleValueCallback: Called from non oracle user")
+	}
+
+	return t.vehicleValueCallback(stub, args)
+}
+
+//==============================================================================================================================
+//	 vehicleValueCallback - Callback for when a vehicle value has been retreived
+//		args - requestId, vehicleValue
+//==============================================================================================================================
+func (t *InsuranceChaincode) vehicleValueCallback(stub shim.ChaincodeStubInterface, args []string) (error) {
 
 	vehicleValue, err := strconv.Atoi(args[1])
 
@@ -467,7 +556,7 @@ func (t *InsuranceChaincode) queryOracleForVehicleValue(stub shim.ChaincodeStubI
 	if err != nil {
 		fmt.Println("Error querying oracle for vehicle value: %s", err);
 		fmt.Println("Calling callback with default value")
-		t.vehicleValueOracleCallback(stub, []string{stub.GetTxID(), "5555"})
+		t.vehicleValueCallback(stub, []string{stub.GetTxID(), "5555"})
 	}
 }
 
@@ -557,15 +646,13 @@ func (t *InsuranceChaincode)  get_caller_data(stub shim.ChaincodeStubInterface) 
 
 	user, err := t.get_username(stub)
 
-	// if err != nil { return "", "", err }
-
-	// ecert, err := t.get_ecert(stub, user);
-
-	// if err != nil { return "", "", err }
+	if err != nil { user = "dummy-user" }
 
 	affiliation, err := t.check_affiliation(stub);
 
-	if err != nil { return "", "", err }
+	if err != nil { affiliation = "dummy-affiliation" }
+
+	fmt.Printf("caller_data: %s %s", user, affiliation)
 
 	return user, affiliation, nil
 }
@@ -577,14 +664,13 @@ func (t *InsuranceChaincode)  get_caller_data(stub shim.ChaincodeStubInterface) 
 
 func (t *InsuranceChaincode) get_username(stub shim.ChaincodeStubInterface) (string, error) {
 
-	//username, err := stub.ReadCertAttribute("username");
-	//if err != nil {
-	//	fmt.Printf("Couldn't get attribute 'username'. Error: %s", err)
-	//	return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error())
-	//}
-    //
-	//return string(username), nil
-	return "dummy-user", nil
+	username, err := stub.ReadCertAttribute("username");
+	if err != nil {
+		fmt.Printf("Couldn't get attribute 'username'. Error: %s", err)
+		return "", errors.New("Couldn't get attribute 'username'. Error: " + err.Error())
+	}
+
+	return string(username), nil
 }
 
 //==============================================================================================================================
@@ -593,56 +679,72 @@ func (t *InsuranceChaincode) get_username(stub shim.ChaincodeStubInterface) (str
 //==============================================================================================================================
 
 func (t *InsuranceChaincode) check_affiliation(stub shim.ChaincodeStubInterface) (string, error) {
-	//affiliation, err := stub.ReadCertAttribute("role");
-	//if err != nil { return "", errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
-	//return string(affiliation), nil
-	return "dummy-affiliation", nil
+	affiliation, err := stub.ReadCertAttribute("role");
+	if err != nil { return "", errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
+	return string(affiliation), nil
 }
 
 //==============================================================================================================================
 //	 addGarageReport - This method adds the garage report's details into the claim
 //   args{claimId, garage, estimated_cost,  writeOff, Note}
 //==============================================================================================================================
-func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
+func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running addGarageReport()")
 
-	if len(args) != 5 {
-		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 5 (claimId, garage, estimated_cost, writeOff, Note)")
-		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 5 (claimId, garage, estimated_cost, writeOff, Note)")
-	}
-
-	if !t.isApprovedGarage(stub, args[1]){
-		fmt.Println("ADD_GARAGE_REPORT: Unapproved garage. Expecting an approved garage")
-		return nil, errors.New("ADD_GARAGE_REPORT: Unapproved garage. Expecting an approved garage")
+	if len(args) != 4 {
+		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 4 (claimId, estimated_cost, writeOff, Note)")
+		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 4 (claimId, estimated_cost, writeOff, Note)")
 	}
 
 	// Does a claim exist for this vehicle?
 	var theClaim Claim
 	var claimId string = args[0]
-	
+
 	theClaim, err := t.retrieveClaim(stub , claimId)
 
 	if err != nil {	fmt.Printf("\nADD_GARAGE_REPORT: Failed to retrieve claim Id: %s", err); return nil, errors.New("ADD_GARAGE_REPORT: Error retrieving claim with claimId = " + claimId) }
-		
-	// Is the Claim in a valid state to receive a garage report?
-    if STATE_AWAITING_GARAGE_REPORT != theClaim.Details.Status {
-		fmt.Printf("ADD_GARAGE_REPORT: unexpected Input for claim with Id: %s\n", claimId)
-		return nil, errors.New("ADD_GARAGE_REPORT: unexpected Input for claim with claimId = " + claimId)
-	}
-	
-	var report ClaimDetailsClaimGarageReport
-	report, err = NewGarageReport(args[1], args[2], args[3], args[4])
 
+	if !t.shouldAcceptGarageReportForClaim(stub, theClaim, caller, caller_affiliation) {
+		return nil, errors.New("ADD_GARAGE_REPORT: Invalid. Affilliation: " + caller_affiliation + ", status:" + theClaim.Details.Status)
+	}
+
+	var report ClaimDetailsClaimGarageReport
+	report, err = NewGarageReport(caller, args[1], args[2], args[3])
 	theClaim.Details.Report = report
 
 	theClaim.Details.Status = STATE_PENDING_AFTER_REPORT_DECISION
 
-	t.saveClaim(stub, theClaim)	
+	t.saveClaim(stub, theClaim)
 
 	t.afterReportProcess(stub, theClaim)
-	
+
 	return nil, nil
+}
+
+func (t *InsuranceChaincode) shouldAcceptGarageReportForClaim(stub shim.ChaincodeStubInterface, claim Claim, caller string, caller_affiliation string) (bool) {
+	//Super user can do anything
+	if caller_affiliation == ROLE_SUPER_USER { return true }
+
+	//Is caller a garage?
+	if caller_affiliation != ROLE_GARAGE {
+		fmt.Printf("Non Garage user attempting to add a garage report!!")
+		return false
+	}
+
+	// Is the Claim in a valid state to receive a garage report?
+	if STATE_AWAITING_GARAGE_REPORT != claim.Details.Status {
+		fmt.Printf("ADD_GARAGE_REPORT: claim in invalid state for garage report, with Id: %s\n", claim.Id)
+		return false
+	}
+
+	//Is the garage an approved garage?
+	if !t.isApprovedGarage(stub, caller) {
+		fmt.Printf("ADD_GARAGE_REPORT: Garage is not approved: %s\n", caller)
+		return false
+	}
+
+	return true
 }
 
 //=========================================================================================
@@ -714,11 +816,11 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	}
 
     var theClaim Claim
-	
+
 	theClaim, err := t.retrieveClaim(stub , args[0])
-	
+
 	if err != nil {	fmt.Printf("\nAGREE_PAYOUT_AMOUNT: Failed to retrieve claim Id: %s", err); return nil, errors.New("AGREE_PAYOUT_AMOUNT: Error retrieving claim with claimId = " + args[0]) }
-	
+
 	if theClaim.Details.Status != STATE_AWAITING_CLAIMANT_CONFIRMATION{
 		fmt.Println("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
 		return nil, errors.New("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
@@ -727,7 +829,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	var acceptDeny bool
 	acceptDeny, err = strconv.ParseBool(args[1])
 	if err != nil {fmt.Printf("AGREE_PAYOUT_AMOUNT Error: invalid value passed for agreement: %s\n", err); return nil, errors.New("Invalid value passed for agreement")}
-	
+
 	if acceptDeny {
 		theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue = theClaim.Details.Settlement.TotalLoss.CarValueEstimate
 		theClaim.Details.Status = STATE_SETTLED
@@ -736,7 +838,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 		theClaim.Details.Settlement.Dispute = true
 	}
 	t.saveClaim(stub, theClaim)
-		
+
 	return nil, nil
 }
 
@@ -834,7 +936,7 @@ func (t *InsuranceChaincode) closeClaim(stub shim.ChaincodeStubInterface,  calle
 func (t *InsuranceChaincode) isApprovedGarage(stub shim.ChaincodeStubInterface, garage string) bool {
 
 	var approvedGarages ApprovedGarages
-	
+
 	bytes, err := stub.GetState(APPROVED_GARAGES_KEY)
 	if err != nil {	fmt.Printf("IS_APPROVED_GARAGE: Failed to check the garage: %s", err); return false }
 
@@ -864,5 +966,4 @@ func (t *InsuranceChaincode) saveClaim(stub shim.ChaincodeStubInterface, theClai
 	
 	return true, nil
 }
-
 

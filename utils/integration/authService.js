@@ -38,7 +38,7 @@ module.exports = {
       json: requestData
     }, function (error, response, body) {
       if(response.statusCode == 200){
-        callback(true);
+        callback(body.username);
       }
       else{
         callback(false);
@@ -63,6 +63,7 @@ module.exports = {
       //verify JWT with Auth header in syntax "Bearer 12321k3123jlkj"
       module.exports.verifyJWT(header, auth , function(ok){
         if(ok){
+          req.user = ok;
           next();
         }
         else{
@@ -74,6 +75,18 @@ module.exports = {
           return;
         }
       });
+    }
+  },
+  checkAuthorized: function (req, response, next) {
+    var origin = req.headers.origin;
+    if (req.user === req.params.username || (req.method.toUpperCase() === 'OPTIONS') || (origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')) {
+      next();
+    } else {
+      response.setHeader('Content-Type', 'application/json');
+      response.statusCode = 403;
+      response.write(JSON.stringify({reason: "You are not authorized to access that resource"}));
+      response.end();
+      return;
     }
   },
   allowOriginsMiddleware: function(req, res, next) {

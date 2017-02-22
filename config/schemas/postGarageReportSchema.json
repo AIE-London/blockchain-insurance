@@ -8,20 +8,19 @@
       "type": "string",
       "minLength": 1
     },
-    "garage": {
-      "type": "string",
-      "minLength": 1
-    },
     "estimatedCost":{
       "type": "number"
     },
     "writeOff":{
       "enum": [ true ]
+    },
+    "notes":{
+      "type":"string",
+      "minLength": 1
     }
   },
   "required": [
     "claimId",
-    "garage",
     "estimatedCost"
   ],
   "additionalProperties": false

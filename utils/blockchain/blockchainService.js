@@ -5,6 +5,7 @@ var PEER_ADDRESS = config.blockchain.peerAddress;
 var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
 var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 var CHAINCODE_ID  = config.blockchain.chaincodeId;
+var ATTRS = ['username', 'role'];
 
 var chain = hfc.newChain("insurance");
 
@@ -47,15 +48,15 @@ var login = function(name, secret, callback){
   });
 };
 
-var loginAndInvoke = function(functionName, args, callback) {
+var loginAndInvoke = function(functionName, args, username, callback) {
 
   console.log("Enrolling");
-  chain.enroll("lukas", "NPKYL39uKbkj", function (err, user) {
+  chain.enroll(username, "", function (err, user) { // No Token Needed As We Expect to User to Already Be Registered
     if (err) {
       console.error(err);
       console.log("Attemping to get user");
 
-      chain.getUser("lukas", function (err, userViaGet) {
+      chain.getUser(username, function (err, userViaGet) {
         if (err) {
           console.error(err);
           callback(err);
@@ -78,7 +79,8 @@ var invoke = function(functionName, args, user, callback) {
     // Function to trigger
     fcn: functionName,
     // Parameters for the invoke function
-    args: args
+    args: args,
+    attrs: ATTRS
   };
 
   console.log("Invoke request: " + JSON.stringify(invokeRequest));
@@ -101,8 +103,8 @@ var invoke = function(functionName, args, user, callback) {
   });
 };
 
-var loginAndQuery = function(funcionName, args, callback){
-  login("lukas", "NPKYL39uKbkj", function(user){
+var loginAndQuery = function(funcionName, args, username, callback){
+  login(username, "", function(user){ // No Token Needed As We Expect to User to Already Be Registered
     console.log("--- USER ---");
     console.log(user);
     if (user.error){
@@ -117,7 +119,8 @@ var query = function(functionName, args, user, callback){
   var queryRequest = {
     chaincodeID: CHAINCODE_ID,
     fcn: functionName,
-    args: args
+    args: args,
+    attrs: ATTRS
   };
 
   console.log("QUERY REQUEST: " + JSON.stringify(queryRequest));
@@ -143,10 +146,10 @@ var query = function(functionName, args, user, callback){
 
 
 module.exports = {
-  invoke: function(functionName, args, callback){
-    loginAndInvoke(functionName, args, callback);
+  invoke: function(functionName, args, username, callback){
+    loginAndInvoke(functionName, args, username, callback);
   },
-  query: function(functionName, args, callback){
-    loginAndQuery(functionName, args, callback);
+  query: function(functionName, args, username, callback){
+    loginAndQuery(functionName, args, username, callback);
   }
 };

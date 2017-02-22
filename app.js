@@ -19,6 +19,7 @@ var blockchainSetup = require('./utils/blockchain/setup');
 var oracle = require('./utils/blockchain/oracle');
 var claimService = require('./utils/blockchain/claimService');
 var garageService = require('./utils/blockchain/garageService');
+var policyService = require('./utils/blockchain/policyService');
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
@@ -43,6 +44,7 @@ var schemas = {};
 schemas.authSchema = require("./config/schemas/authSchema.json");
 schemas.postClaimSchema = require("./config/schemas/postClaimSchema.json");
 schemas.postGarageReportSchemas = require('./config/schemas/postGarageReportSchema.json');
+schemas.postPayoutAgreementSchema = require('./config/schemas/postPayoutAgreementSchema.json');
 
 /**
  * Swagger Configuration
@@ -67,6 +69,7 @@ var swaggerSpec = swaggerJSDoc(options);
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/authSchema.json"), "authSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postClaimSchema.json"), "postClaimSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postGarageReportSchema.json"), "postGarageReportSchema");
+swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postPayoutAgreementSchema.json"), "postPayoutAgreementSchema");
 
 /**
  * Environment Configuration
@@ -81,7 +84,11 @@ var bodyParser = require('body-parser');
 var apiPath = config.app.paths.api;
 
 // All Environments
-// app.set('port', process.env.PORT || 3000);
+
+// Local Only
+if ('development' == app.get('env')) {
+  app.set('port', process.env.PORT || 3000);
+}
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.engine('html', require('ejs').renderFile);
@@ -114,7 +121,7 @@ app.get('/swagger.json', function(req, res) {
  * /auth/:
  *   post:
  *     tags:
- *       - ExampleAPI
+ *       - blockchain-insurance
  *     description: Authenticates and returns token as header
  *     produces:
  *       - application/json
@@ -136,7 +143,8 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
   var password = request.body.password;
 
   userService.authenticate(username, password, function(rsp){
-    if(rsp.details && rsp.details.carInsurance && rsp.details.carInsurance.type === "claimant"){
+
+    if(rsp.details && rsp.details.carInsurance){//Add following to restrict to claimant: && rsp.details.carInsurance.type === "claimant"){
       auth.signJWT(request.body, {secret:"123", name: username}, function(resp){
         console.log(resp);
         if(resp){
@@ -171,7 +179,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
  * /component/test/{username}:
  *   get:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -185,7 +193,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
  *       200:
  *         description: Successful
  */
-app.get('/' + apiPath.base + '/test/:username', function(request, response){
+app.get('/' + apiPath.base + '/test/:username', auth.checkAuthorized, function(request, response){
 	var responseBody = {};
 
   blockchainSetup.setup();
@@ -202,7 +210,7 @@ app.get('/' + apiPath.base + '/test/:username', function(request, response){
  * /claimant/{username}/claim:
  *   post:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -211,22 +219,77 @@ app.get('/' + apiPath.base + '/test/:username', function(request, response){
  *         description: the username
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-claim-schema
  *         description: claim content
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postClaimSchema'
+ *           $ref: '#/definitions/postClaimSchema'
  *     responses:
  *       200:
  *         description: Successful
  */
-app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema}), function(request, response){
+app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema}), auth.checkAuthorized, function(request, response){
 
   var responseBody = {};
 
-  claimService.raiseClaim(request.body, function(res){
+  claimService.raiseClaim(request.body, request.params.username, function(res){
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = res.results;
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
+});
+
+
+/**
+ * @swagger
+ * /claimant/{username}/claim/{claimId}/payout/agreement:
+ *   post:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Is a test endpoint
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username
+ *         in: path
+ *         type: string
+ *         required: true
+ *       - name: claimId
+ *         description: Id of the claim
+ *         in: path
+ *         type: string
+ *         required: true
+ *       - name: post-payout-agreement-schema
+ *         description: agreement
+ *         in: body
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/postPayoutAgreementSchema'
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body: schemas.postPayoutAgreementSchema}), auth.checkAuthorized, function(request, response){
+
+  var responseBody = {};
+
+  claimService.makeClaimAgreement(request.params.claimId, request.body.agreement, request.params.username, function(res){
     if (res.error){
       responseBody.error = res.error;
       response.statusCode = 500;
@@ -248,7 +311,7 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
 
 /**
  * @swagger
- * /caller/{username}/garage/{garage}/report:
+ * /caller/{username}/report:
  *   post:
  *     tags:
  *       - blockchain-insurance
@@ -260,52 +323,30 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  *         description: the username of the person submitting the report
  *         in: path
  *         type: string
- *         required: true,
- *       - name: garageReport
- *         description: the garage report
- *         in: path
- *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-garage-report-schema
  *         description: claim content
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postGarageReportSchema'
+ *           $ref: '#/definitions/postGarageReportSchema'
  *     responses:
  *       200:
  *         description: Successful
  */
-app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), function(request, response){
+app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSchemas}), auth.checkAuthorized, function(request, response){
 
   var responseBody = {};
 
-  garageService.addGarageReport(request.body, function(res){
+  var args = request.body;
+  if (!args.notes){
+    args.notes = "none";
+  }
+  if (!args.writeOff){
+    args.writeOff = false;
+  }
 
-    if (res.error){
-      responseBody.error = res.error;
-      response.statusCode = 500;
-    } else if (res.results){
-      responseBody.results = res.results;
-      response.statusCode = 200;
-    } else {
-      responseBody.error = "unknown issue";
-      response.statusCode = 500;
-    }
-
-    response.setHeader('Content-Type', 'application/json');
-    response.write(JSON.stringify(responseBody));
-    response.end();
-    return;
-
-  });
-});
-
-app.get('/caller/:username/history/claims/all', function(request, response){
-
-  var responseBody = {};
-
-  claimService.getFullHistory(function(res){
+  garageService.addGarageReport(args, request.params.username, function(res){
 
     if (res.error){
       responseBody.error = res.error;
@@ -328,30 +369,125 @@ app.get('/caller/:username/history/claims/all', function(request, response){
 
 /**
  * @swagger
+ * /caller/{username}/history/claims/all:
+ *   get:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Getting all claims authorised for the user
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username of the person submitting the report
+ *         in: path
+ *         type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.get('/caller/:username/history/claims/all', auth.checkAuthorized, function(request, response){
+
+  var username = request.params.username;
+
+  var responseBody = {};
+
+  claimService.getFullHistory(request.params.username, function(res){
+
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = JSON.parse(res.results);
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
+});
+
+
+
+/**
+ * @swagger
+ * /caller/{username}/history/policies/all:
+ *   get:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Getting all policies authorised for the user
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username of the person getting the policies
+ *         in: path
+ *         type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.get('/caller/:username/history/policies/all', auth.checkAuthorized, function(request, response){
+
+  var username = request.params.username;
+
+  var responseBody = {};
+
+  policyService.getFullHistory(request.params.username, function(res){
+
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = JSON.parse(res.results);
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
+});
+
+
+/**
+ * @swagger
  * /component/oracle/vehicle/{styleId}/value:
  *   get:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Obtain an estimated vehicle value based on an Edmunds Api style id
  *     produces:
  *       - application/json
  *     parameters:
- *       - styleId: styleId
+ *       - name: styleId
  *         description: the edmunds api style id of the vehicle
  *         in: path
  *         type: string
  *         required: true
- *       - mileage: mileage
+ *       - name: mileage
  *         description: the mileage of the vehicle
  *         in: query
  *         type: string
  *         required: true
- *       - requestId: requestId
+ *       - name: requestId
  *         description: requests with the same requestId will always return the same result
  *         in: query
  *         type: string
  *         required: true
- *       - callbackFunctionName: callbackFunctionName
+ *       - name: callbackFunctionName
  *         description: the name of the chaincode function that should be invoked when a value has been obtained
  *         in: query
  *         type: string
@@ -379,6 +515,7 @@ app.get('/' + apiPath.base + '/oracle/vehicle/:styleId/value', function(request,
   return;
 
 });
+
 
  // End API
 
@@ -408,8 +545,4 @@ app.use(function(err, req, res, next) {
     // pass error to next error middleware handler
     next(err);
   }
-});
-app.use(bodyParser.json());
-http.createServer(app).listen(app.get('port'), '0.0.0.0', function() {
-	console.log('Express server listening on port ' + app.get('port'));
 });
