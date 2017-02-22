@@ -99,8 +99,8 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 	} else if function == "vehicleValueOracleCallback" {
 		fmt.Printf("vehicleValueOracleCallback: ReqeustId / Value" + args[0] + " / " + args[1]);
 		return nil, t.vehicleValueOracleCallback(stub, caller, caller_affiliation, args)
-	} else if function == "approvePaymentOut" {
-		return t.approvePaymentOut(stub, caller, caller_affiliation, args)
+	} else if function == "confirmPaidOut" {
+		return t.confirmPaidOut(stub, caller, caller_affiliation, args)
 	} 
 	fmt.Println("invoke did not find func: " + function)
 
@@ -831,6 +831,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	if err != nil {fmt.Printf("AGREE_PAYOUT_AMOUNT Error: invalid value passed for agreement: %s\n", err); return nil, errors.New("Invalid value passed for agreement")}
 
 	if acceptDeny {
+		//TODO this will only work for total loss
 		theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue = theClaim.Details.Settlement.TotalLoss.CarValueEstimate
 		theClaim.Details.Status = STATE_SETTLED
 		theClaim.Details.Settlement.Dispute = false
@@ -843,14 +844,16 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 }
 
 //=========================================================================================
-// This Function sets the Payment out approval
+// This Function marks the claim as paid
 //=========================================================================================
-func (t *InsuranceChaincode) approvePaymentOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
+func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
 	fmt.Println("running approvePaymentOut()")
 
-    //
-	//TODO - Check the Security  check that only the insurere can run this block
-	//
+    if caller_affiliation != ROLE_INSURER {
+		fmt.Printf("\nconfirmPaidOut: Caller is not an insurer")
+		return nil, errors.New("\nconfirmPaidOut: Caller is not an insurer")
+	}
+
 	if len(args) != 1 {
 		fmt.Println("APPROVE_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
 		return nil, errors.New("APPROVE_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
@@ -884,15 +887,15 @@ func (t *InsuranceChaincode) approvePaymentOut(stub shim.ChaincodeStubInterface,
 	theClaim.Details.Settlement.Payments[0] = payment	
 	t.saveClaim(stub, theClaim)
 
-	return t.processPaymentOut(stub, caller, caller_affiliation, args)
+	return t.processConfirmPaidOut(stub, caller, caller_affiliation, args)
 
 }
 
 //===========================================================================================
-// This method Send the payment out.
+// This method sets the claim to paid
 // The Claim must be in the state 'STATE_SETTLED and the PAYMENT in the state STATE_NOT_PAID
 //===========================================================================================
-func (t *InsuranceChaincode) processPaymentOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error){
+func (t *InsuranceChaincode) processConfirmPaidOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error){
 
 	if len(args) != 1 {
 		fmt.Println("PROCESS_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
