@@ -120,7 +120,7 @@ app.get('/swagger.json', function(req, res) {
  * /auth/:
  *   post:
  *     tags:
- *       - ExampleAPI
+ *       - blockchain-insurance
  *     description: Authenticates and returns token as header
  *     produces:
  *       - application/json
@@ -178,7 +178,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
  * /component/test/{username}:
  *   get:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -209,7 +209,7 @@ app.get('/' + apiPath.base + '/test/:username', auth.checkAuthorized, function(r
  * /claimant/{username}/claim:
  *   post:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -259,7 +259,7 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  * /claimant/{username}/claim/{claimId}/payout/agreement:
  *   post:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -417,7 +417,7 @@ app.get('/caller/:username/history/claims/all', auth.checkAuthorized, function(r
  * /component/oracle/vehicle/{styleId}/value:
  *   get:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Obtain an estimated vehicle value based on an Edmunds Api style id
  *     produces:
  *       - application/json
