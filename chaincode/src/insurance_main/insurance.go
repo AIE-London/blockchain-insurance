@@ -923,14 +923,6 @@ func (t *InsuranceChaincode) processPaymentOut(stub shim.ChaincodeStubInterface,
 }
 
 //===============================================================================
-// This method Closes the claim
-//===============================================================================
-func (t *InsuranceChaincode) closeClaim(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error){
-
-	return nil, nil
-}
-
-//===============================================================================
 // This method saves the claim after updates
 //===============================================================================
 func (t *InsuranceChaincode) isApprovedGarage(stub shim.ChaincodeStubInterface, garage string) bool {
