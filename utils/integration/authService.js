@@ -78,6 +78,7 @@ module.exports = {
     }
   },
   checkAuthorized: function (req, response, next) {
+    var origin = req.headers.origin;
     if (req.user === req.params.username || (req.method.toUpperCase() === 'OPTIONS') || (origin === 'http://aston-swagger-ui.eu-gb.mybluemix.net') || (origin === 'https://aston-swagger-ui.eu-gb.mybluemix.net')) {
       next();
     } else {
