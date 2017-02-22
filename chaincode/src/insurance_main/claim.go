@@ -110,6 +110,8 @@ const   STATE_SETTLED  			                    = "settled"
 const	STATUS_OPEN									= "open"
 const	STATUS_CLOSED								= "closed"
 const   STATE_IN_PROGRESS                           = "in_progress"
+const   STATE_NOT_PAID                              = "not_paid"
+const   STATE_PAID                      = "paid"
 
 //==============================================================================================================================
 //	 Claim Type types - TODO Flesh these out. TODO Following IBM sample, but should these be enums?
@@ -123,6 +125,13 @@ const   MULTIPLE_PARTIES  			=  "multiple_parties"
 const   TOTAL_LOSS          =  "total_loss"
 const   LIABILITY  			=  "liability"
 const   NOT_AT_FAULT        =  "not_at_fault"
+
+//
+//
+//
+const RECIPIENT_TYPE_CLAIMANT   = "claimant"
+const RECIPIENT_TYPE_THIRDPARTY = "third_party"
+const RECIPIENT_TYPE_GARAGE     = "garage"
 
 //=================================================================================================================================
 //	 newClaim	-	Constructs a new claim
@@ -166,3 +175,20 @@ func NewGarageReport(Garage string, EstimateStr string,  WriteOffStr string, Not
 	
 	return report, nil
 }
+
+
+//================================================================================================================================================
+//  NewClaimDetailsSettlementPayment: creates a new NewClaimDetailsSettlementPayment
+//================================================================================================================================================
+func NewClaimDetailsSettlementPayment(RecipientType	string, Recipient string, Amount int,  Status string)(ClaimDetailsSettlementPayment){
+
+	var payment ClaimDetailsSettlementPayment 
+	
+	payment.RecipientType = RecipientType
+	payment.Recipient     = Recipient
+	payment.Amount        = Amount
+	payment.Status        = Status
+
+	return payment
+}
+

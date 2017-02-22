@@ -90,7 +90,9 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 	} else if function == "vehicleValueOracleCallback" {
 		fmt.Printf("vehicleValueOracleCallback: ReqeustId / Value" + args[0] + " / " + args[1]);
 		return nil, t.vehicleValueOracleCallback(stub, args)
-	}
+	} else if function == "approvePaymentOut" {
+		return t.approvePaymentOut(stub, caller, caller_affiliation, args)
+	} 
 	fmt.Println("invoke did not find func: " + function)
 
 	return nil, errors.New("Received unknown function invocation: " + function)
@@ -704,7 +706,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	fmt.Println("running agreePayoutAmount()")
 
     //
-	//TODO - Check the Security  check that this claimant has the rith to update this claim
+	//TODO - Check the Security  check that this claimant has the right to view and update this claim
 	//
 	if len(args) != 2 {
 		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
@@ -729,6 +731,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	if acceptDeny {
 		theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue = theClaim.Details.Settlement.TotalLoss.CarValueEstimate
 		theClaim.Details.Status = STATE_SETTLED
+		theClaim.Details.Settlement.Dispute = false
 	} else {
 		theClaim.Details.Settlement.Dispute = true
 	}
@@ -737,6 +740,93 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	return nil, nil
 }
 
+//=========================================================================================
+// This Function sets the Payment out approval
+//=========================================================================================
+func (t *InsuranceChaincode) approvePaymentOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
+	fmt.Println("running approvePaymentOut()")
+
+    //
+	//TODO - Check the Security  check that only the insurere can run this block
+	//
+	if len(args) != 1 {
+		fmt.Println("APPROVE_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
+		return nil, errors.New("APPROVE_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
+	}
+
+    var theClaim Claim
+	
+	theClaim, err := t.retrieveClaim(stub , args[0])
+	
+	if err != nil {	fmt.Printf("\nAPPROVE_PAYMENT_OUT: Failed to retrieve claim Id: %s\n", err); return nil, errors.New("APPROVE_PAYMENT_OUT: Error retrieving claim with claimId = " + args[0]) }
+	
+	if theClaim.Details.Status != STATE_SETTLED{
+		fmt.Println("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
+		return nil, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
+	}
+
+	policy, err := t.retrievePolicy(stub, theClaim.Relations.RelatedPolicy);
+
+	if err != nil {
+		fmt.Printf("APPROVE_PAYMENT_OUT: Error getting policy with id %s", theClaim.Relations.RelatedPolicy);
+		return nil, errors.New("Policy doesnt exist");
+	}
+
+	var payment ClaimDetailsSettlementPayment
+	
+	var Amount = theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue - policy.Details.Excess
+
+	payment = NewClaimDetailsSettlementPayment(RECIPIENT_TYPE_CLAIMANT, policy.Relations.Owner, Amount, STATE_NOT_PAID)
+
+	theClaim.Details.Settlement.Payments = make([]ClaimDetailsSettlementPayment, 1)
+	theClaim.Details.Settlement.Payments[0] = payment	
+	t.saveClaim(stub, theClaim)
+
+	return t.processPaymentOut(stub, caller, caller_affiliation, args)
+
+}
+
+//===========================================================================================
+// This method Send the payment out.
+// The Claim must be in the state 'STATE_SETTLED and the PAYMENT in the state STATE_NOT_PAID
+//===========================================================================================
+func (t *InsuranceChaincode) processPaymentOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error){
+
+	if len(args) != 1 {
+		fmt.Println("PROCESS_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
+		return nil, errors.New("PROCESS_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
+	}
+
+    var theClaim Claim
+	
+	theClaim, err := t.retrieveClaim(stub , args[0])
+	
+	if err != nil {	fmt.Printf("\nPROCESS_PAYMENT_OUT: Failed to retrieve claim Id: %s\n", err); return nil, errors.New("PROCESS_PAYMENT_OUT: Error retrieving claim with claimId = " + args[0]) }
+	
+	if theClaim.Details.Status != STATE_SETTLED{
+		fmt.Println("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
+		return nil, errors.New("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
+	}
+
+	if theClaim.Details.Status != STATE_SETTLED{
+		fmt.Println("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
+		return nil, errors.New("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
+	}
+	
+	// Assumption: there should be only one payment
+	theClaim.Details.Settlement.Payments[0].Status = STATE_PAID
+	t.saveClaim(stub, theClaim)
+	
+	return nil, nil
+}
+
+//===============================================================================
+// This method Closes the claim
+//===============================================================================
+func (t *InsuranceChaincode) closeClaim(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error){
+
+	return nil, nil
+}
 
 //===============================================================================
 // This method saves the claim after updates
@@ -770,7 +860,7 @@ func (t *InsuranceChaincode) saveClaim(stub shim.ChaincodeStubInterface, theClai
 	
 	fmt.Printf("About to update claim %s \n", theClaim.Id)
 	err = stub.PutState(theClaim.Id, bytes)
-	if err != nil { fmt.Printf("\nSAVE_CLAIM: Error adding garage Report: %s", err); return false, errors.New("Error storing claim details") }
+	if err != nil { fmt.Printf("\nSAVE_CLAIM: Error Saving claim details: %s", err); return false, errors.New("Error storing claim details") }
 	
 	return true, nil
 }
