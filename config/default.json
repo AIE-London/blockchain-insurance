@@ -161,7 +161,7 @@
       "version": "1.0.0",
       "description": "Documenting our RESTful API with Swagger "
     },
-    "host": "nodeapicloudantexample.eu-gb.mybluemix.net",
+    "host": "blockchain-insurance.eu-gb.mybluemix.net",
     "basePath": "/"
   },
   "allowedOrigins": [
