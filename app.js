@@ -218,13 +218,13 @@ app.get('/' + apiPath.base + '/test/:username', auth.checkAuthorized, function(r
  *         description: the username
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-claim-schema
  *         description: claim content
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postClaimSchema'
+ *           $ref: '#/definitions/postClaimSchema'
  *     responses:
  *       200:
  *         description: Successful
@@ -268,18 +268,18 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  *         description: the username
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: claimId
  *         description: Id of the claim
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-payout-agreement-schema
  *         description: agreement
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postPayoutAgreementSchema'
+ *           $ref: '#/definitions/postPayoutAgreementSchema'
  *     responses:
  *       200:
  *         description: Successful
@@ -310,7 +310,7 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
 
 /**
  * @swagger
- * /caller/{username}/garage/{garage}/report:
+ * /caller/{username}/report:
  *   post:
  *     tags:
  *       - blockchain-insurance
@@ -322,13 +322,13 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
  *         description: the username of the person submitting the report
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-garage-report-schema
  *         description: claim content
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postGarageReportSchema'
+ *           $ref: '#/definitions/postGarageReportSchema'
  *     responses:
  *       200:
  *         description: Successful
@@ -380,7 +380,7 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
  *         description: the username of the person submitting the report
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *     responses:
  *       200:
  *         description: Successful
@@ -422,22 +422,22 @@ app.get('/caller/:username/history/claims/all', auth.checkAuthorized, function(r
  *     produces:
  *       - application/json
  *     parameters:
- *       - styleId: styleId
+ *       - name: styleId
  *         description: the edmunds api style id of the vehicle
  *         in: path
  *         type: string
  *         required: true
- *       - mileage: mileage
+ *       - name: mileage
  *         description: the mileage of the vehicle
  *         in: query
  *         type: string
  *         required: true
- *       - requestId: requestId
+ *       - name: requestId
  *         description: requests with the same requestId will always return the same result
  *         in: query
  *         type: string
  *         required: true
- *       - callbackFunctionName: callbackFunctionName
+ *       - name: callbackFunctionName
  *         description: the name of the chaincode function that should be invoked when a value has been obtained
  *         in: query
  *         type: string
