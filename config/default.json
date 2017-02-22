@@ -3,7 +3,7 @@
     "peerAddress": "services-uscentral.skytap.com:8551",
     "memberssvcAddress": "services-uscentral.skytap.com:8447",
     "keystorePath": "/keyValStore",
-    "chaincodeId": "be6f7901a35a5511ed1c97bb4d1ed4eaeb3e32873242e6683977b04c7c266ef5a626153f37bca6b2adcd45e8a60968644262d2d8374a45cbd860fbf0be3301da",
+    "chaincodeId": "ec8c260d83a71f8a412ab7e363d14f270e618649f2d9c79c220514ee67ca19c436be0265dc8ed7d082fba9bed635b8a51fb72ec500f5caf0917c955a5c2d0421",
     "devMode": false,
     "registrarUser": {
       "enrollmentId": "WebAppAdmin",
