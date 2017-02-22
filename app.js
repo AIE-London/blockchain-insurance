@@ -120,7 +120,7 @@ app.get('/swagger.json', function(req, res) {
  * /auth/:
  *   post:
  *     tags:
- *       - ExampleAPI
+ *       - blockchain-insurance
  *     description: Authenticates and returns token as header
  *     produces:
  *       - application/json
@@ -178,7 +178,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
  * /component/test/{username}:
  *   get:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -209,7 +209,7 @@ app.get('/' + apiPath.base + '/test/:username', auth.checkAuthorized, function(r
  * /claimant/{username}/claim:
  *   post:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -218,13 +218,13 @@ app.get('/' + apiPath.base + '/test/:username', auth.checkAuthorized, function(r
  *         description: the username
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-claim-schema
  *         description: claim content
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postClaimSchema'
+ *           $ref: '#/definitions/postClaimSchema'
  *     responses:
  *       200:
  *         description: Successful
@@ -259,7 +259,7 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  * /claimant/{username}/claim/{claimId}/payout/agreement:
  *   post:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Is a test endpoint
  *     produces:
  *       - application/json
@@ -268,18 +268,18 @@ app.post('/claimant/:username/claim', validate({ body: schemas.postClaimSchema})
  *         description: the username
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: claimId
  *         description: Id of the claim
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-payout-agreement-schema
  *         description: agreement
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postPayoutAgreementSchema'
+ *           $ref: '#/definitions/postPayoutAgreementSchema'
  *     responses:
  *       200:
  *         description: Successful
@@ -310,7 +310,7 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
 
 /**
  * @swagger
- * /caller/{username}/garage/{garage}/report:
+ * /caller/{username}/report:
  *   post:
  *     tags:
  *       - blockchain-insurance
@@ -322,27 +322,30 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
  *         description: the username of the person submitting the report
  *         in: path
  *         type: string
- *         required: true,
- *       - name: garageReport
- *         description: the garage report
- *         in: path
- *         type: string
- *         required: true,
+ *         required: true
  *       - name: post-garage-report-schema
  *         description: claim content
  *         in: body
  *         required: true
  *         schema:
- *           $ref: '/definitions/postGarageReportSchema'
+ *           $ref: '#/definitions/postGarageReportSchema'
  *     responses:
  *       200:
  *         description: Successful
  */
-app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.postGarageReportSchemas}), auth.checkAuthorized, function(request, response){
+app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSchemas}), auth.checkAuthorized, function(request, response){
 
   var responseBody = {};
 
-  garageService.addGarageReport(request.body, request.params.username, function(res){
+  var args = request.body;
+  if (!args.notes){
+    args.notes = "none";
+  }
+  if (!args.writeOff){
+    args.writeOff = false;
+  }
+
+  garageService.addGarageReport(args, request.params.username, function(res){
 
     if (res.error){
       responseBody.error = res.error;
@@ -366,7 +369,7 @@ app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.pos
 /**
  * @swagger
  * /caller/{username}/history/claims/all:
- *   post:
+ *   get:
  *     tags:
  *       - blockchain-insurance
  *     description: Getting all claims authorised for the user
@@ -377,7 +380,7 @@ app.post('/caller/:username/garage/:garage/report', validate({ body: schemas.pos
  *         description: the username of the person submitting the report
  *         in: path
  *         type: string
- *         required: true,
+ *         required: true
  *     responses:
  *       200:
  *         description: Successful
@@ -414,27 +417,27 @@ app.get('/caller/:username/history/claims/all', auth.checkAuthorized, function(r
  * /component/oracle/vehicle/{styleId}/value:
  *   get:
  *     tags:
- *       - blockchain-insurance-node-components
+ *       - blockchain-insurance
  *     description: Obtain an estimated vehicle value based on an Edmunds Api style id
  *     produces:
  *       - application/json
  *     parameters:
- *       - styleId: styleId
+ *       - name: styleId
  *         description: the edmunds api style id of the vehicle
  *         in: path
  *         type: string
  *         required: true
- *       - mileage: mileage
+ *       - name: mileage
  *         description: the mileage of the vehicle
  *         in: query
  *         type: string
  *         required: true
- *       - requestId: requestId
+ *       - name: requestId
  *         description: requests with the same requestId will always return the same result
  *         in: query
  *         type: string
  *         required: true
- *       - callbackFunctionName: callbackFunctionName
+ *       - name: callbackFunctionName
  *         description: the name of the chaincode function that should be invoked when a value has been obtained
  *         in: query
  *         type: string

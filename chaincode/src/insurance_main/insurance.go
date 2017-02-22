@@ -54,6 +54,7 @@ const   ROLE_POLICY_HOLDER	= "policyholder"
 const	ROLE_GARAGE			= "garage"
 const   ROLE_INSURER		= "insurer"
 const   ROLE_SUPER_USER		= "superuser"
+const   ROLE_ORACLE			= "oracle"
 
 func main() {
 	err := shim.Start(new(InsuranceChaincode))
@@ -97,7 +98,7 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 		return t.agreePayoutAmount(stub, caller, caller_affiliation, args)
 	} else if function == "vehicleValueOracleCallback" {
 		fmt.Printf("vehicleValueOracleCallback: ReqeustId / Value" + args[0] + " / " + args[1]);
-		return nil, t.vehicleValueOracleCallback(stub, args)
+		return nil, t.vehicleValueOracleCallback(stub, caller, caller_affiliation, args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -511,10 +512,24 @@ func (t *InsuranceChaincode) retrieveVehicleJSON(stub shim.ChaincodeStubInterfac
 }
 
 //==============================================================================================================================
-//	 vehicleValueCallback - Callback, called by an oracle when a vehicle value has been retreived
+//	 vehicleValueOracleCallback - Callback, called by an oracle when a vehicle value has been retreived
 //		args - requestId, vehicleValue
 //==============================================================================================================================
-func (t *InsuranceChaincode) vehicleValueOracleCallback(stub shim.ChaincodeStubInterface, args []string) (error) {
+func (t *InsuranceChaincode) vehicleValueOracleCallback(stub shim.ChaincodeStubInterface, caller string, callerAffiliation string, args []string) (error) {
+
+	if callerAffiliation != ROLE_ORACLE {
+		fmt.Printf("vehicleValueCallback: Called from non oracle user")
+		return errors.New("vehicleValueCallback: Called from non oracle user")
+	}
+
+	return t.vehicleValueCallback(stub, args)
+}
+
+//==============================================================================================================================
+//	 vehicleValueCallback - Callback for when a vehicle value has been retreived
+//		args - requestId, vehicleValue
+//==============================================================================================================================
+func (t *InsuranceChaincode) vehicleValueCallback(stub shim.ChaincodeStubInterface, args []string) (error) {
 
 	vehicleValue, err := strconv.Atoi(args[1])
 
@@ -539,7 +554,7 @@ func (t *InsuranceChaincode) queryOracleForVehicleValue(stub shim.ChaincodeStubI
 	if err != nil {
 		fmt.Println("Error querying oracle for vehicle value: %s", err);
 		fmt.Println("Calling callback with default value")
-		t.vehicleValueOracleCallback(stub, []string{stub.GetTxID(), "5555"})
+		t.vehicleValueCallback(stub, []string{stub.GetTxID(), "5555"})
 	}
 }
 
