@@ -369,7 +369,7 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
 /**
  * @swagger
  * /caller/{username}/history/claims/all:
- *   post:
+ *   get:
  *     tags:
  *       - blockchain-insurance
  *     description: Getting all claims authorised for the user
