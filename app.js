@@ -310,7 +310,7 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
 
 /**
  * @swagger
- * /caller/{username}/report:
+ * /garage/{username}/report:
  *   post:
  *     tags:
  *       - blockchain-insurance
