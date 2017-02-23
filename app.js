@@ -19,6 +19,7 @@ var blockchainSetup = require('./utils/blockchain/setup');
 var oracle = require('./utils/blockchain/oracle');
 var claimService = require('./utils/blockchain/claimService');
 var garageService = require('./utils/blockchain/garageService');
+var policyService = require('./utils/blockchain/policyService');
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
@@ -310,7 +311,7 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
 
 /**
  * @swagger
- * /caller/{username}/report:
+ * /garage/{username}/report:
  *   post:
  *     tags:
  *       - blockchain-insurance
@@ -369,7 +370,7 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
 /**
  * @swagger
  * /caller/{username}/history/claims/all:
- *   post:
+ *   get:
  *     tags:
  *       - blockchain-insurance
  *     description: Getting all claims authorised for the user
@@ -411,6 +412,55 @@ app.get('/caller/:username/history/claims/all', auth.checkAuthorized, function(r
 
   });
 });
+
+
+
+/**
+ * @swagger
+ * /caller/{username}/history/policies/all:
+ *   get:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Getting all policies authorised for the user
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username of the person getting the policies
+ *         in: path
+ *         type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.get('/caller/:username/history/policies/all', auth.checkAuthorized, function(request, response){
+
+  var username = request.params.username;
+
+  var responseBody = {};
+
+  policyService.getFullHistory(request.params.username, function(res){
+
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = JSON.parse(res.results);
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
+});
+
 
 /**
  * @swagger

@@ -5,7 +5,7 @@
   "type": "object",
   "properties": {
     "agreement": {
-      "enum": [ true, false ]
+      "type": "boolean"
     }
   },
   "required": [

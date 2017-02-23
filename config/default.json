@@ -161,7 +161,7 @@
       "version": "1.0.0",
       "description": "Documenting our RESTful API with Swagger "
     },
-    "host": "nodeapicloudantexample.eu-gb.mybluemix.net",
+    "host": "blockchain-insurance.eu-gb.mybluemix.net",
     "basePath": "/"
   },
   "allowedOrigins": [
@@ -173,8 +173,10 @@
     "http://localhost:3001",
     "https://localhost:8080",
     "http://localhost:8080",
-    "http://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net/",
-    "https://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net/"
+    "http://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net",
+    "https://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net",
+    "http://blockchain-insurance-garage-dashboard.eu-gb.mybluemix.net",
+    "https://blockchain-insurance-garage-dashboard.eu-gb.mybluemix.net"
   ],
   "app": {
     "paths": {
