@@ -127,6 +127,7 @@ eca:
                 claimant2: 1 123456789123 institution_a
                 insurer1: 1 123456789123 institution_a
                 insurer2: 1 123456789123 institution_a
+                insurer_dev: 1 123456789123 institution_a
                 garage1: 1 123456789123 institution_a
                 garage2: 1 123456789123 institution_a
                 superuser: 1 123456789123 institution_a
@@ -325,6 +326,8 @@ aca:
               attribute-entry-23: garage2;institution_a;role;garage;2015-01-01T00:00:00-03:00;;
               attribute-entry-24: superuser;institution_a;username;superuser;2015-01-01T00:00:00-03:00;;
               attribute-entry-25: superuser;institution_a;role;superuser;2015-01-01T00:00:00-03:00;;
+              attribute-entry-26: insurer_dev;institution_a;username;insurer_dev;2015-01-01T00:00:00-03:00;;
+              attribute-entry-27: insurer_dev;institution_a;role;insurer;2015-01-01T00:00:00-03:00;;
 
 
           address: localhost:7054
