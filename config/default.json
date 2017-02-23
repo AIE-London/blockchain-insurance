@@ -1,6 +1,7 @@
 {
   "blockchain": {
     "peerAddress": "services-uscentral.skytap.com:8551",
+    "eventsAddress": "services-uscentral.skytap.com:8560",
     "memberssvcAddress": "services-uscentral.skytap.com:8447",
     "keystorePath": "/keyValStore",
     "chaincodeId": "e822d1e8d3db1a85610ff28c8c1395d3eb8023d13745241bc55f98eeb3b7513cba6230c30181a0719d1c8b5c9d083215538655d1f40a28b8f3e80e6a4f2b1728",
@@ -10,6 +11,7 @@
       "enrollSecret": "DJY27pEnl16d"
     },
     "oracleUser" : "oracle",
+    "insurerUser": "insurer1",
     "setup": {
       "shouldSetupUsers": false,
       "deploy": {
@@ -37,7 +39,8 @@
             "name": "role",
             "value": "policyholder"
           }
-        ]
+        ],
+        "emailAddress": "poc.claimant1@gmail.com"
       },
       {
         "enrollmentId": "claimant2",
@@ -51,7 +54,8 @@
             "name": "role",
             "value": "policyholder"
           }
-        ]
+        ],
+        "emailAddress": "poc.claimant2@gmail.com"
       },
       {
         "enrollmentId": "insurer1",
@@ -214,5 +218,8 @@
         }
       }
     }
+  },
+  "email": {
+    "serverAddress": "http://aston-email-server.eu-gb.mybluemix.net/mail"
   }
 }

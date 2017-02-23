@@ -15,8 +15,13 @@ var makeClaimAgreement = function(claimId, agreement, username, callback){
   blockchainService.invoke("agreePayoutAmount", [claimId, agreement.toString()], username, callback);
 };
 
+var confirmPaidOut = function(claimId, username, callback) {
+  blockchainService.invoke("confirmPaidOut", [claimId], username, callback);
+}
+
 module.exports = {
   raiseClaim: raiseClaim,
   getFullHistory: getFullHistory,
-  makeClaimAgreement: makeClaimAgreement
+  makeClaimAgreement: makeClaimAgreement,
+  confirmPaidOut: confirmPaidOut
 };
