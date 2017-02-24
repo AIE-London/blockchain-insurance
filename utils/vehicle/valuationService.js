@@ -1,10 +1,15 @@
+var path = require('path');
 var util = require("util");
+var fs = require('fs');
 var request = require("request");
 var NodeCache = require("node-cache");
 var resultCache = new NodeCache( { stdTTL: 3600, checkperiod: 600 } );
 var edmundsApiKey = process.env.EDMUNDS_API_KEY;
 var dollarToPoundRate = 0.8;
 var defaultCarValue = 6000;
+
+var appDir = path.dirname(require.main.filename);
+var API_KEY_PATH = appDir + "/config/credentials/.edmund-api-key";
 
 var getVehicleValuation = function(styleId, mileage, callback){
   var cacheKey = getQueryCacheKey(styleId, mileage);
@@ -14,6 +19,14 @@ var getVehicleValuation = function(styleId, mileage, callback){
     console.log("Cache hit on styleId/Mileage: " + styleId + "/" + mileage);
     callback(cacheResult);
     return;
+  }
+
+  if (!edmundsApiKey){
+    try{
+      edmundsApiKey = fs.readFileSync(API_KEY_PATH, 'utf8');
+    } catch(e){
+      console.error("Could not load API Key From File: ", e);
+    }
   }
 
   if (edmundsApiKey) {
