@@ -101,7 +101,9 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 		return nil, t.vehicleValueOracleCallback(stub, caller, caller_affiliation, args)
 	} else if function == "confirmPaidOut" {
 		return t.confirmPaidOut(stub, caller, caller_affiliation, args)
-	} 
+	} else if function == "closeClaim" {
+		return t.closeClaim(stub, caller, caller_affiliation, args)
+	}
 	fmt.Println("invoke did not find func: " + function)
 
 	return nil, errors.New("Received unknown function invocation: " + function)
@@ -692,7 +694,7 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface, c
 
 	fmt.Println("running addGarageReport()")
 
-	if len(args) != 4 {
+	if len(args) != 5 {
 		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 4 (claimId, estimated_cost, writeOff, Note)")
 		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 4 (claimId, estimated_cost, writeOff, Note)")
 	}
@@ -707,6 +709,11 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface, c
 
 	if !t.shouldAcceptGarageReportForClaim(stub, theClaim, caller, caller_affiliation) {
 		return nil, errors.New("ADD_GARAGE_REPORT: Invalid. Affilliation: " + caller_affiliation + ", status:" + theClaim.Details.Status)
+	}
+
+	if !t.isVehicleValidForClaim(stub, theClaim, args[4]){
+		fmt.Printf("ADD_GARAGE_REPORT: Invalid Registration: %s\n", args[4])
+		return nil, errors.New("ADD_GARAGE_REPORT: Invalid Registration: " + args[4])
 	}
 
 	var report ClaimDetailsClaimGarageReport
@@ -926,7 +933,7 @@ func (t *InsuranceChaincode) processConfirmPaidOut(stub shim.ChaincodeStubInterf
 }
 
 //===============================================================================
-// This method saves the claim after updates
+// This method checks whether all the payement out are sent
 //===============================================================================
 func (t *InsuranceChaincode) isApprovedGarage(stub shim.ChaincodeStubInterface, garage string) bool {
 
@@ -962,3 +969,80 @@ func (t *InsuranceChaincode) saveClaim(stub shim.ChaincodeStubInterface, theClai
 	return true, nil
 }
 
+//===============================================================================
+// This method Closes the claim
+//===============================================================================
+func (t *InsuranceChaincode) closeClaim(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error){
+
+	if len(args) != 1 {
+		fmt.Println("CLOSE_CLAIM: Incorrect number of arguments. Expecting 1 (claimId)")
+		return nil, errors.New("CLOSE_CLAIM: Incorrect number of arguments. Expecting 1 (claimId)")
+	}
+
+    var theClaim Claim
+
+	theClaim, err := t.retrieveClaim(stub , args[0])
+
+	if err != nil {	fmt.Printf("\nCLOSE_CLAIM: Failed to retrieve claim Id: %s", err); return nil, errors.New("CLOSE_CLAIM: Error retrieving claim with claimId = " + args[0]) }
+
+	if theClaim.Details.Status != STATE_SETTLED{
+		fmt.Println("CLOSE_CLAIM: Incorrect STATE, Claim can not be closed if not SETTLED")
+		return nil, errors.New("CLOSE_CLAIM: Incorrect STATE, Claim can not be closed if not SETTLED")
+	}
+
+	if TOTAL_LOSS == theClaim.Details.Settlement.Decision{
+		return t.closeTotalLossClaim(stub, theClaim)
+	}
+	fmt.Printf("\nCLOSE_CLAIM: Unsuported Close Operation. Currently the System can only Close Total_Loss Claims.\n")
+	return nil, errors.New("CLOSE_CLAIM: Unsuported Close Operation. Currently the System can only Close Total_Loss Claims.")
+}
+
+//============================================================================================================
+//
+//============================================================================================================
+func (t *InsuranceChaincode) closeTotalLossClaim(stub shim.ChaincodeStubInterface,  theClaim Claim) ([]byte, error){
+
+	if !t.isAllPaidout(theClaim){
+		fmt.Println("CLOSE_CLAIM: Error: open payment out. Total_Loss Claim can not be closed with open payment out")
+		return nil, errors.New("CLOSE_CLAIM: Error: open payment out. Total_Loss Claim can not be closed with open payment out")
+	}
+
+	theClaim.Details.Status = STATUS_CLOSED
+	t.saveClaim(stub, theClaim)
+
+	return nil, nil
+}
+
+//===========================================================================================================
+//  This function checks whether all the payment out are sent
+//===========================================================================================================
+func (t *InsuranceChaincode) isAllPaidout(theClaim Claim) bool {
+
+	if theClaim.Details.Settlement.Payments != nil{
+		// Assumption: there should be only one payment out
+		if STATE_PAID == theClaim.Details.Settlement.Payments[0].Status{
+			return true;
+		}
+	}
+
+	return false
+}
+
+func (t *InsuranceChaincode) isVehicleValidForClaim(stub shim.ChaincodeStubInterface,  theClaim Claim, vehicleReg string)(bool){
+
+	//Check policy exists
+	policy, err := t.retrievePolicy(stub, theClaim.Relations.RelatedPolicy);
+
+	if err != nil {
+		fmt.Printf("isVehicleValidForClaim: Error getting policy with id %s", theClaim.Relations.RelatedPolicy)
+		return false
+	}
+
+	//Check policy vehicle matches the registration provided
+	if policy.Relations.Vehicle == vehicleReg{
+		fmt.Printf("isVehicleValidForClaim: Policy Vehicle is incorrect %s", vehicleReg)
+		return true;
+	}
+	fmt.Printf("isVehicleValidForClaim: Policy Vehicle is incorrect %s", vehicleReg)
+	return false
+}
