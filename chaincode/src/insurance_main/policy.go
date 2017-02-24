@@ -35,10 +35,9 @@ type PolicyRelations struct {
 //=================================================================================================================================
 //	 newPolicy	-	Constructs a new policy
 //=================================================================================================================================
-func NewPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
+func NewPolicy(owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
 	var policy Policy
 
-	policy.Id = id
 	policy.Type = "policy"
 
 	policy.Details.StartDate = startDate

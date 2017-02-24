@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 )
 
-// InsuranceChaincode example simple Chaincode implementation
+// InsuranceChaincode
 type InsuranceChaincode struct {}
 
 //==============================================================================================================================
@@ -27,15 +27,6 @@ type Coordinates struct {
 	x float32 `json:"x"`
 	y float32 `json:"y"`
 }
-
-//==============================================================================================================================
-//	 Keys for obtaining the current id for the different domain object types.
-//   Ids are incremental so knowing the latest id is useful when querying for
-//   all domain objects of a certain type.
-//==============================================================================================================================
-const   CURRENT_POLICY_ID_KEY	= "currentPolicyId"
-const	CURRENT_USER_ID_KEY	= "currentUserId"
-const   CURRENT_CLAIM_ID_KEY	= "currentClaimId"
 
 //Used to store all current approved garages
 const	APPROVED_GARAGES_KEY	= "approvedGarages"
@@ -139,17 +130,11 @@ func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller 
 	}
 
 	excess, _ := strconv.Atoi(args[2])
-	policy := NewPolicy(t.getNextPolicyId(stub), caller, args[0], args[1], excess, args[3])
+	policy := NewPolicy(caller, args[0], args[1], excess, args[3])
 
-	bytes, err := json.Marshal(policy)
+	_, err := SavePolicy(stub, policy)
 
-	if err != nil { fmt.Printf("addPolicy Error converting policy record: %s", err); return nil, errors.New("Error converting policy record") }
-
-	err = stub.PutState(policy.Id, bytes)
-
-	if err != nil { fmt.Printf("addPolicy: Error storing policy record: %s", err); return nil, errors.New("Error storing policy record") }
-
-	return nil, nil
+	return nil, err
 }
 
 //=================================================================================================================================
@@ -277,7 +262,7 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface, caller string, claim Claim) (bool, error) {
 
 	//Check policy exists
-	policy, err := t.retrievePolicy(stub, claim.Relations.RelatedPolicy);
+	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy);
 
 	if err != nil {
 		fmt.Printf("checkClaimIsValid: Error getting policy with id %s", claim.Relations.RelatedPolicy);
@@ -297,25 +282,18 @@ func (t *InsuranceChaincode) checkClaimIsValid(stub shim.ChaincodeStubInterface,
 //	 retrieveAllPoliciesJSON - Iterates through all policy ids, retreiving each and returning a JSON representation
 //==============================================================================================================================
 func (t *InsuranceChaincode) retrieveAllPoliciesJSON(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string) ([]byte, error) {
-	numberOfPolicies := t.getCurrentPolicyIdNumber(stub)
+	policies := RetrieveAllPolicies(stub)
 
 	result := "["
 
-	for i := 1; i <= numberOfPolicies; i++ {
+	for _, policy := range policies {
+		if t.isPolicyRelevantToCaller(stub, policy, caller, caller_affiliation) {
+			policyJSON, err := json.Marshal(policy)
 
-		policyId := POLICY_ID_PREFIX + strconv.Itoa(i)
-
-		policy, err := t.retrievePolicy(stub, policyId)
-
-		if (err == nil) {
-			if t.isPolicyRelevantToCaller(stub, policy, caller, caller_affiliation) {
-				policyJSON, err := t.retrievePolicyJSON(stub, policyId)
-
-				if err != nil {
-					fmt.Printf("retrievePolicies: Cannot retrieve policy with id " + policyId + ": %s", err)
-				} else {
-					result += string(policyJSON) + ","
-				}
+			if err != nil {
+				fmt.Printf("retrievePolicies: Cannot marshall policy with id " + policy.Id + ": %s", err)
+			} else {
+				result += string(policyJSON) + ","
 			}
 		}
 	}
@@ -327,26 +305,6 @@ func (t *InsuranceChaincode) retrieveAllPoliciesJSON(stub shim.ChaincodeStubInte
 	}
 
 	return []byte(result), nil
-}
-
-//==============================================================================================================================
-//	 retrievePolicy - Gets the state of the data at policyId in the ledger then converts it from the stored
-//					JSON into the Policy struct for use in the contract. Returns the Policy struct.
-//					Returns empty policy if it errors.
-//==============================================================================================================================
-func (t *InsuranceChaincode) retrievePolicy(stub shim.ChaincodeStubInterface, policyId string) (Policy, error) {
-
-	var policy Policy
-
-	bytes, err := t.retrievePolicyJSON(stub, policyId)
-
-	if err != nil {	fmt.Printf("retrievePolicy: Cannot read policy: %s", err); return policy, errors.New("retrievePolicy: Cannot read policy")}
-
-	err = json.Unmarshal(bytes, &policy);
-
-	if err != nil {	fmt.Printf("retrievePolicy: Corrupt policy record "+string(bytes)+": %s", err); return policy, errors.New("retrievePolicy: Corrupt policy record"+string(bytes))}
-
-	return policy, nil
 }
 
 //==============================================================================================================================
@@ -442,7 +400,7 @@ func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInte
 	}
 
 	//Is claim policy owned by caller?
-	policy, err := t.retrievePolicy(stub, claim.Relations.RelatedPolicy)
+	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
 	if err != nil {fmt.Printf("Invalid policy, claim is not relevant"); return false}
 
 	if caller == policy.Relations.Owner {fmt.Printf("Policy owner and caller match, claim is relevant"); return true}
@@ -759,7 +717,7 @@ func (t *InsuranceChaincode) shouldAcceptGarageReportForClaim(stub shim.Chaincod
 //=========================================================================================
 func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface, claim Claim) {
 	//Get vehicle
-	policy, _ := t.retrievePolicy(stub, claim.Relations.RelatedPolicy)
+	policy, _ := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
 	vehicle, _ := t.retrieveVehicle(stub, policy.Relations.Vehicle)
 
 	t.queryOracleForVehicleValue(stub, claim, vehicle)
@@ -843,7 +801,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 		theClaim.Details.Status = STATE_SETTLED
 		theClaim.Details.Settlement.Dispute = false
 
-		policy, _ := t.retrievePolicy(stub, theClaim.Relations.RelatedPolicy)
+		policy, _ := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy)
 		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, policy.Relations.Owner)
 
 		eventBytes, err := json.Marshal(event);
@@ -889,7 +847,7 @@ func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface,  c
 		return nil, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
 	}
 
-	policy, err := t.retrievePolicy(stub, theClaim.Relations.RelatedPolicy);
+	policy, err := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy);
 
 	if err != nil {
 		fmt.Printf("APPROVE_PAYMENT_OUT: Error getting policy with id %s", theClaim.Relations.RelatedPolicy);
@@ -1049,7 +1007,7 @@ func (t *InsuranceChaincode) isAllPaidout(theClaim Claim) bool {
 func (t *InsuranceChaincode) isVehicleValidForClaim(stub shim.ChaincodeStubInterface,  theClaim Claim, vehicleReg string)(bool){
 
 	//Check policy exists
-	policy, err := t.retrievePolicy(stub, theClaim.Relations.RelatedPolicy);
+	policy, err := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy);
 
 	if err != nil {
 		fmt.Printf("isVehicleValidForClaim: Error getting policy with id %s", theClaim.Relations.RelatedPolicy)
