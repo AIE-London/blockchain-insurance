@@ -505,13 +505,13 @@ app.get('/' + apiPath.base + '/oracle/vehicle/:styleId/value', function(request,
   var styleId = request.params.styleId;
 
   oracle.requestVehicleValuation(requestId, styleId, mileage, callbackFunctionName, function() {
-    response.setHeader('Content-Type', 'application/json');
-    response.write(JSON.stringify(responseBody));
-    response.statusCode = 202;
-    response.end();
-    return;
+    console.log("All good from Oracle: " + request.query.requestId);
   });
 
+  response.setHeader('Content-Type', 'application/json');
+  response.write(JSON.stringify(responseBody));
+  response.statusCode = 202;
+  response.end();
   return;
 
 });
