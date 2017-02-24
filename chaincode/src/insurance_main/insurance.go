@@ -842,6 +842,18 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 		theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue = theClaim.Details.Settlement.TotalLoss.CarValueEstimate
 		theClaim.Details.Status = STATE_SETTLED
 		theClaim.Details.Settlement.Dispute = false
+
+		policy, _ := t.retrievePolicy(stub, theClaim.Relations.RelatedPolicy)
+		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, policy.Relations.Owner)
+
+		eventBytes, err := json.Marshal(event);
+
+		if (err != nil) {
+			fmt.Printf("\nAGREE_PAYOUT_AMOUNT: Unable to parse event, continuing without emitting", err)
+		} else {
+			//Emit claim settled event
+			stub.SetEvent(event.Type, eventBytes)
+		}
 	} else {
 		theClaim.Details.Settlement.Dispute = true
 	}

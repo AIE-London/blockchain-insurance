@@ -2,6 +2,7 @@ var hfc = require('hfc');
 var config = require('config')
 
 var PEER_ADDRESS = config.blockchain.peerAddress;
+var EVENTS_ADDRESS = config.blockchain.eventsAddress;
 var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
 var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 var CHAINCODE_ID  = config.blockchain.chaincodeId;
@@ -28,6 +29,19 @@ chain.addPeer("grpc://" + PEER_ADDRESS);
 
 chain.setDevMode(config.blockchain.devMode);
 
+// Configure the event hub
+chain.eventHubConnect("grpc://" + EVENTS_ADDRESS);
+var eventHub = chain.getEventHub();
+var registeredEventListenerIds = [];
+
+// disconnect when done listening for events
+process.on('exit', function() {
+  for (var i = 0; i < registeredEventListenerIds.length; i++) {
+    eventHub.unregisterChaincodeEvent(registeredEventListenerIds[i]);
+  }
+  chain.eventHubDisconnect();
+});
+
 var login = function(name, secret, callback){
   console.log("Enrolling: " + name);
   chain.enroll(name, secret, function(err, user){
@@ -50,8 +64,8 @@ var login = function(name, secret, callback){
 
 var loginAndInvoke = function(functionName, args, username, callback) {
 
-  console.log("Enrolling");
-  chain.enroll(username, "", function (err, user) { // No Token Needed As We Expect to User to Already Be Registered
+  console.log("Enrolling " + username);
+  chain.enroll(username, "123456789123", function (err, user) { // Enroll secret only used in dev mode
     if (err) {
       console.error(err);
       console.log("Attemping to get user");
@@ -66,7 +80,6 @@ var loginAndInvoke = function(functionName, args, username, callback) {
       });
       return;
     }
-
     invoke(functionName, args, user, callback);
 
   });
@@ -104,7 +117,7 @@ var invoke = function(functionName, args, user, callback) {
 };
 
 var loginAndQuery = function(funcionName, args, username, callback){
-  login(username, "", function(user){ // No Token Needed As We Expect to User to Already Be Registered
+  login(username, "123456789123", function(user){ // Enroll secret only used in dev mode
     console.log("--- USER ---");
     console.log(user);
     if (user.error){
@@ -141,9 +154,15 @@ var query = function(functionName, args, user, callback){
     console.log("error on query: %j", err);
     callback(err);
   })
-
 };
 
+var registerEventListener = function(eventName, callback){
+  console.log("Registering listener for event name: " + eventName);
+  var registrationId = eventHub.registerChaincodeEvent(CHAINCODE_ID, eventName, callback);
+
+  console.log("Registered listener for event name: " + eventName + " with id: " + JSON.stringify(registrationId));
+  registeredEventListenerIds.push(registrationId);
+};
 
 module.exports = {
   invoke: function(functionName, args, username, callback){
@@ -151,5 +170,6 @@ module.exports = {
   },
   query: function(functionName, args, username, callback){
     loginAndQuery(functionName, args, username, callback);
-  }
+  },
+  registerEventListener : registerEventListener
 };

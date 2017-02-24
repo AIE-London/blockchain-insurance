@@ -32,6 +32,11 @@ docker exec -i -t dockercompose_membersrvc_1 /bin/bash
 rm -rf /var/hyperledger/production
 exit
 docker restart dockercompose_membersrvc_1
+docker exec -i -t dockercompose_vp0_1 /bin/bash
+rm -rf /var/hyperledger/production
+exit
+docker restart dockercompose_vp0_1
+
 ```
 
 7 users will then be created:
