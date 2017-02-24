@@ -695,8 +695,8 @@ func (t *InsuranceChaincode) addGarageReport(stub shim.ChaincodeStubInterface, c
 	fmt.Println("running addGarageReport()")
 
 	if len(args) != 5 {
-		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 4 (claimId, estimated_cost, writeOff, Note)")
-		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 4 (claimId, estimated_cost, writeOff, Note)")
+		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 5 (claimId, estimated_cost, writeOff, Note, reg_number)")
+		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 5 (claimId, estimated_cost, writeOff, Note, reg_number)")
 	}
 
 	// Does a claim exist for this vehicle?
