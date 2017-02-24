@@ -979,6 +979,12 @@ func (t *InsuranceChaincode) closeClaim(stub shim.ChaincodeStubInterface,  calle
 		return nil, errors.New("CLOSE_CLAIM: Incorrect number of arguments. Expecting 1 (claimId)")
 	}
 
+	//Only an insurer can close the claim
+	if (caller_affiliation != ROLE_INSURER) {
+		fmt.Println("CLOSE_CLAIM: Only an insurer can close the claim")
+		return nil, errors.New("CLOSE_CLAIM: Only an insurer can close the claim")
+	}
+
     var theClaim Claim
 
 	theClaim, err := t.retrieveClaim(stub , args[0])
@@ -1040,7 +1046,7 @@ func (t *InsuranceChaincode) isVehicleValidForClaim(stub shim.ChaincodeStubInter
 
 	//Check policy vehicle matches the registration provided
 	if policy.Relations.Vehicle == vehicleReg{
-		fmt.Printf("isVehicleValidForClaim: Policy Vehicle is incorrect %s", vehicleReg)
+		fmt.Printf("isVehicleValidForClaim: Policy Vehicle is correct %s", vehicleReg)
 		return true;
 	}
 	fmt.Printf("isVehicleValidForClaim: Policy Vehicle is incorrect %s", vehicleReg)
