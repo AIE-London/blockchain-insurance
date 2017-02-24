@@ -24,8 +24,9 @@ const RETRIEVE_FUNCTION = "retrieve"
 
 type Dao struct {}
 
-func (t *Dao) init(stub shim.ChaincodeStubInterface, crudChaincodeId string) {
+func InitDao(stub shim.ChaincodeStubInterface, crudChaincodeId string) {
 	stub.PutState(CRUD_ID_KEY, []byte(crudChaincodeId))
+	configureIdState(stub)
 }
 
 func SavePolicy(stub shim.ChaincodeStubInterface, policy Policy) (Policy, error) {
@@ -88,17 +89,18 @@ func save(stub shim.ChaincodeStubInterface, id string, toSave []byte) (error){
 }
 
 func invoke(stub shim.ChaincodeStubInterface, chaincodeId, functionName string, args []string) (error){
-	_, error := stub.InvokeChaincode(chaincodeId, createArgs(functionName, args))
+	_, error := stub.InvokeChaincode(chaincodeId, createArgs(functionName, stub.GetTxID(), args))
 
 	return error
 }
 
 func query(stub shim.ChaincodeStubInterface, chaincodeId, functionName string, args []string) ([]byte, error){
-	return stub.QueryChaincode(chaincodeId, createArgs(functionName, args))
+	return stub.QueryChaincode(chaincodeId, createArgs(functionName, stub.GetTxID(), args))
 }
 
-func createArgs(functionName string, args[]string) ([][]byte){
-	funcAndArgs := append([]string{functionName}, args...)
+func createArgs(functionName string, txId string, args[]string) ([][]byte){
+	funcAndArgs := append([]string{functionName}, txId)
+	funcAndArgs = append(funcAndArgs, args...)
 	return util.ArrayToChaincodeArgs(funcAndArgs)
 }
 
@@ -149,17 +151,28 @@ func getNextId(stub shim.ChaincodeStubInterface, idKey string, idPrefix string) 
 
 	nextIdNum := strconv.Itoa(currentId + 1)
 
-	stub.PutState(idKey, []byte(nextIdNum))
+	save(stub, idKey, []byte(nextIdNum))
 
 	return idPrefix + nextIdNum
 }
 
 func getCurrentIdNumber(stub shim.ChaincodeStubInterface, idKey string) (int) {
-	bytes, err := stub.GetState(idKey);
+	bytes, err := retrieve(stub, idKey)
 
 	if err != nil { fmt.Printf("getCurrentIdNumber Error getting id %s", err); return -1}
 
 	currentId, err := strconv.Atoi(string(bytes))
 
 	return currentId;
+}
+
+func configureIdState(stub shim.ChaincodeStubInterface) {
+	fmt.Println("******** IN CONFIGURE ID STATE *******")
+	bytes, err := retrieve(stub, CURRENT_POLICY_ID_KEY)
+	fmt.Println("*******" + string(bytes) + "********")
+	if (err != nil || len(bytes) == 0) {
+		fmt.Println("No existing policy id key, adding....")
+		save(stub, CURRENT_POLICY_ID_KEY, []byte("0"))
+	}
+
 }

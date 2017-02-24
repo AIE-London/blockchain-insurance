@@ -56,12 +56,13 @@ func main() {
 
 func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
-	stub.PutState(CURRENT_POLICY_ID_KEY, []byte("0"))
+	InitDao(stub, args[0])
+	InitOracleService(stub, args)
+
 	stub.PutState(CURRENT_USER_ID_KEY, []byte("0"))
 	stub.PutState(CURRENT_CLAIM_ID_KEY, []byte("0"))
 
 	t.initSetup(stub)
-	InitOracleService(stub, args)
 
 	return nil, nil
 }
