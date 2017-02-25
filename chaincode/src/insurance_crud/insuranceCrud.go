@@ -27,7 +27,7 @@ func main() {
 
 func (t *InsuranceCrudChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
-	//Only applied in dev mode as the chaincode will be deployed with a fresh chaincodeId in prod mode
+	//Only applies in dev mode as the chaincode will be deployed with a fresh chaincodeId in prod mode
 	t.wipeData(stub)
 
 	//Add new key holder
@@ -96,7 +96,7 @@ func (t *InsuranceCrudChaincode) save(stub shim.ChaincodeStubInterface, args []s
 
 	if (err == nil) {fmt.Println("SAVE (KEY " + args[1] + "): " + string(args[2]))}
 
-	t.addKey(stub, args[1])
+	err = t.addKey(stub, args[1])
 	return nil, err
 }
 
@@ -151,9 +151,7 @@ func (t *InsuranceCrudChaincode) wipeData(stub shim.ChaincodeStubInterface){
 func (t *InsuranceCrudChaincode) addKey(stub shim.ChaincodeStubInterface, key string) (error) {
 	bytes, _ := stub.GetState(KEYHOLDER_KEY)
 
-	var keyHolder KeyHolder
-
-	err := json.Unmarshal(bytes, keyHolder);
+	keyHolder, err := t.getKeyHolder(stub)
 
 	if err == nil {
 		keyHolder.Keys = append(keyHolder.Keys, key)
@@ -171,8 +169,6 @@ func (t *InsuranceCrudChaincode) getKeyHolder(stub shim.ChaincodeStubInterface) 
 	var keyHolder KeyHolder
 
 	err := json.Unmarshal(bytes, &keyHolder);
-
-	fmt.Println(string(bytes))
 
 	return keyHolder, err
 }

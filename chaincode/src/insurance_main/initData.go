@@ -1,14 +1,15 @@
 package main
 
-//Policy1 data
-var PolicyArgs1 = []string{"31/01/17", "30/01/18", "300", "BP08BRV"}
-var PolicyCaller1 = "claimant1"
-var PolicyCallerAffiliation1 = "group1"
+import (
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+)
 
-//Policy2 data
-var PolicyArgs2 = []string{"11/01/17", "10/01/18", "250", "DZ14TYV"}
-var PolicyCaller2 = "claimant2"
-var PolicyCallerAffiliation2 = "group1"
+func InitReferenceData(stub shim.ChaincodeStubInterface) (error) {
+	SavePolicy(stub, NewPolicy("P1", "claimant1", "31/01/17", "30/01/18", 300, "BP08BRV"))
+	SavePolicy(stub, NewPolicy("P2", "claimant2", "11/01/17", "10/01/18", 250, "DZ14TYV"))
+
+	return nil
+}
 
 //Vehicle1 data
 var VehicleArgs1 = []string{"Ford", "Focus", "BP08BRV", "2008", "55000", "100924404"}

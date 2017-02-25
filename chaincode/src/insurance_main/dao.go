@@ -17,6 +17,13 @@ const   CURRENT_POLICY_ID_KEY	= "currentPolicyId"
 const	CURRENT_USER_ID_KEY	= "currentUserId"
 const   CURRENT_CLAIM_ID_KEY	= "currentClaimId"
 
+//==============================================================================================================================
+//	 Prefixes for the different domain object type ids
+//==============================================================================================================================
+const   POLICY_ID_PREFIX	= "P"
+const	USER_ID_PREFIX		= "U"
+const   CLAIM_ID_PREFIX		= "C"
+
 const CRUD_ID_KEY = "CRUD_ID_KEY"
 
 const SAVE_FUNCTION = "save"
@@ -36,29 +43,17 @@ func SavePolicy(stub shim.ChaincodeStubInterface, policy Policy) (Policy, error)
 		policy.Id = policyId
 	}
 
-	bytes, err := marshall(policy)
+	err := saveObject(stub, policy.Id, policy)
 
-	if err != nil {fmt.Printf("\nUnable to marshall policy: %s", err); return policy, err}
-
-	err = save(stub, policy.Id, bytes)
-
-	if err != nil {fmt.Printf("Unable to save policy: %s",  err); return policy, err}
-
-	return policy, nil
+	return policy, err
 }
 
 func RetrievePolicy(stub shim.ChaincodeStubInterface, id string) (Policy, error){
 	var policy Policy
 
-	bytes, err := retrieve(stub, id)
+	err := retrieveObject(stub, id, policy)
 
-	if err != nil {	fmt.Printf("RetrievePolicy: Cannot retrieve policy: %s", err); return policy, err}
-
-	err = unmarshal(bytes, &policy);
-
-	if err != nil {	fmt.Printf("RetrievePolicy: Cannot marshall policy: %s", err); return policy, err}
-
-	return policy, nil
+	return policy, err
 }
 
 func RetrieveAllPolicies(stub shim.ChaincodeStubInterface) ([]Policy){
@@ -80,8 +75,77 @@ func RetrieveAllPolicies(stub shim.ChaincodeStubInterface) ([]Policy){
 	return policies
 }
 
+func SaveClaim(stub shim.ChaincodeStubInterface, claim Claim) (Claim, error) {
+	if claim.Id == "" {
+		claimId := getNextClaimId(stub)
+
+		claim.Id = claimId
+	}
+
+	err := saveObject(stub, claim.Id, claim)
+
+	return claim, err
+}
+
+func RetrieveClaim(stub shim.ChaincodeStubInterface, id string) (Claim, error){
+	var claim Claim
+
+	bytes, err := retrieve(stub, id)
+
+	if err != nil {	fmt.Printf("RetrieveClaim: Cannot retrieve claim: %s", err); return claim, err}
+
+	err = unmarshal(bytes, &claim);
+
+	if err != nil {	fmt.Printf("RetrieveClaim: Cannot marshall claim: %s", err); return claim, err}
+
+	return claim, nil
+}
+
+func RetrieveAllClaims(stub shim.ChaincodeStubInterface) ([]Claim){
+	var claims []Claim
+
+	numberOfClaims := getCurrentClaimIdNumber(stub)
+
+	for i := 1; i <= numberOfClaims; i++ {
+
+		claimId := CLAIM_ID_PREFIX + strconv.Itoa(i)
+
+		claim, err := RetrieveClaim(stub, claimId)
+
+		if err != nil {	fmt.Printf("RetrieveAllClaims: Error but continuing: %s", err); }
+
+		claims = append(claims, claim)
+	}
+
+	return claims
+}
+
 func retrieve(stub shim.ChaincodeStubInterface, id string) ([]byte, error) {
 	return query(stub, getCrudChaincodeId(stub), RETRIEVE_FUNCTION, []string{id})
+}
+
+func retrieveObject(stub shim.ChaincodeStubInterface, id string, toStoreObject interface{}) (error){
+	bytes, err := retrieve(stub, id)
+
+	if err != nil {	fmt.Printf("RetrievePolicy: Cannot retrieve object with id: " + id + " : %s", err); return err}
+
+	err = unmarshal(bytes, &toStoreObject);
+
+	if err != nil {	fmt.Printf("RetrievePolicy: Cannot unmarshall object with id: " + id + " : %s", err); return err}
+
+	return nil
+}
+
+func saveObject(stub shim.ChaincodeStubInterface, id string, object interface{}) (error){
+	bytes, err := marshall(object)
+
+	if err != nil {fmt.Printf("\nUnable to marshall object with id: " + id + " : %s", err); return err}
+
+	err = save(stub, id, bytes)
+
+	if err != nil {fmt.Printf("Unable to save policy: %s",  err); return err}
+
+	return nil
 }
 
 func save(stub shim.ChaincodeStubInterface, id string, toSave []byte) (error){
@@ -167,12 +231,10 @@ func getCurrentIdNumber(stub shim.ChaincodeStubInterface, idKey string) (int) {
 }
 
 func configureIdState(stub shim.ChaincodeStubInterface) {
-	fmt.Println("******** IN CONFIGURE ID STATE *******")
 	bytes, err := retrieve(stub, CURRENT_POLICY_ID_KEY)
-	fmt.Println("*******" + string(bytes) + "********")
 	if (err != nil || len(bytes) == 0) {
-		fmt.Println("No existing policy id key, adding....")
-		save(stub, CURRENT_POLICY_ID_KEY, []byte("0"))
+		fmt.Println("No existing policy id key, adding all....")
+		save(stub, CURRENT_POLICY_ID_KEY, []byte("2"))
+		save(stub, CURRENT_CLAIM_ID_KEY, []byte("0"))
 	}
-
 }
