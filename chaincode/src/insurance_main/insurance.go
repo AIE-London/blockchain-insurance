@@ -28,9 +28,6 @@ type Coordinates struct {
 	y float32 `json:"y"`
 }
 
-//Used to store all current approved garages
-const	APPROVED_GARAGES_KEY	= "approvedGarages"
-
 //==============================================================================================================================
 //	 Roles within the system
 //==============================================================================================================================
@@ -52,10 +49,6 @@ func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function str
 	InitDao(stub, args[0])
 	InitOracleService(stub, args)
 	InitReferenceData(stub)
-
-	stub.PutState(CURRENT_USER_ID_KEY, []byte("0"))
-
-	t.initSetup(stub)
 
 	return nil, nil
 }
@@ -163,52 +156,11 @@ func (t *InsuranceChaincode) addUser(stub shim.ChaincodeStubInterface, caller st
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 (Forename, Surname, Email, RelatedPolicy)")
 	}
 
-	user := NewUser(t.getNextUserId(stub), args[0], args[1], args[2], args[3])
+	user := NewUser("", args[0], args[1], args[2], args[3])
 
-	bytes, err := json.Marshal(user)
+	_, err := SaveUser(stub, user)
 
-	if err != nil { fmt.Printf("addUser Error converting user record: %s", err); return nil, errors.New("Error converting user record") }
-
-	err = stub.PutState(user.Id, bytes)
-
-	if err != nil { fmt.Printf("addUser: Error storing user record: %s", err); return nil, errors.New("Error storing user record") }
-
-	return nil, nil
-}
-
-//=================================================================================================================================
-//	 appendApprovedGarages		-	Appends approved garages to the list of approved garages in the ledger
-//=================================================================================================================================
-func (t *InsuranceChaincode) appendApprovedGarages(stub shim.ChaincodeStubInterface, approvedGarages []string) ([]byte, error){
-
-	garages, err := stub.GetState(APPROVED_GARAGES_KEY)
-
-	if err != nil {
-		return nil, errors.New("Failed to get allApprovedGarages")
-	}
-
-	var newGarages = ApprovedGarages{}
-
-	var approvedGaragesList ApprovedGarages
-	json.Unmarshal(garages, &approvedGaragesList)
-
-	newGarages.Garages = approvedGarages
-
-	approvedGaragesList.Garages = append(approvedGaragesList.Garages, newGarages.Garages...)
-
-	bytes, err := json.Marshal(approvedGaragesList)
-
-	if err != nil {
-		fmt.Printf("addApprovedGarages: Error converting garages: %s", err); return nil, errors.New("Error converting garages")
-	}
-
-	err = stub.PutState(APPROVED_GARAGES_KEY, bytes)
-
-	if err != nil {
-		fmt.Printf("addApprovedGarages: Error adding approved garages: %s", err); return nil, errors.New("Error adding approved garages")
-	}
-
-	return nil, nil
+	return nil, err
 }
 
 //=================================================================================================================================
@@ -418,56 +370,6 @@ func (t *InsuranceChaincode) queryOracleForVehicleValue(stub shim.ChaincodeStubI
 		fmt.Println("Calling callback with default value")
 		t.vehicleValueCallback(stub, []string{stub.GetTxID(), "5555"})
 	}
-}
-
-//==============================================================================================================================
-//	 ID Functions - The current id of both policies and claims are stored in blockchain state.
-//   This value is incremented when a new policy or claim is created.
-//   A prefix is added to the id's to differentiate between policies and claims
-//==============================================================================================================================
-
-func (t *InsuranceChaincode) getNextUserId(stub shim.ChaincodeStubInterface) (string) {
-
-	return t.getNextId(stub, CURRENT_USER_ID_KEY, USER_ID_PREFIX);
-}
-
-func (t *InsuranceChaincode) getNextId(stub shim.ChaincodeStubInterface, idKey string, idPrefix string) (string) {
-
-	currentId := t.getCurrentIdNumber(stub, idKey)
-
-	nextIdNum := strconv.Itoa(currentId + 1)
-
-	stub.PutState(idKey, []byte(nextIdNum))
-
-	return idPrefix + nextIdNum
-}
-
-func (t *InsuranceChaincode) getCurrentIdNumber(stub shim.ChaincodeStubInterface, idKey string) (int) {
-	bytes, err := stub.GetState(idKey);
-
-	if err != nil { fmt.Printf("getCurrentIdNumber Error getting id %s", err); return -1}
-
-	currentId, err := strconv.Atoi(string(bytes))
-
-	return currentId;
-}
-
-//==============================================================================================================================
-//	 Init Data Setup
-//==============================================================================================================================
-// Sets up all the data on deployment of chaincode
-//==============================================================================================================================
-func (t *InsuranceChaincode)initSetup(stub shim.ChaincodeStubInterface) {
-
-	//User init data
-	completeUserArgs1 := append(UserArgs1, "P1")
-	t.addUser(stub, UserCaller1, UserCallerAffiliation1, completeUserArgs1)
-
-	completeUserArgs2 := append(UserArgs2, "P2")
-	t.addUser(stub, UserCaller2, UserCallerAffiliation2, completeUserArgs2)
-
-	//ApprovedGarages init data
-	t.appendApprovedGarages(stub, ApprovedGaragesData)
 }
 
 //==============================================================================================================================
@@ -782,12 +684,7 @@ func (t *InsuranceChaincode) processConfirmPaidOut(stub shim.ChaincodeStubInterf
 //===============================================================================
 func (t *InsuranceChaincode) isApprovedGarage(stub shim.ChaincodeStubInterface, garage string) bool {
 
-	var approvedGarages ApprovedGarages
-
-	bytes, err := stub.GetState(APPROVED_GARAGES_KEY)
-	if err != nil {	fmt.Printf("IS_APPROVED_GARAGE: Failed to check the garage: %s", err); return false }
-
-	err = json.Unmarshal(bytes, &approvedGarages)
+	approvedGarages, err := RetrieveApprovedGarages(stub)
 	if err != nil {	fmt.Printf("IS_APPROVED_GARAGE: Corrupt garages record "+string(bytes)+": %s", err); return false}
 
     for _, appGarage := range approvedGarages.Garages {

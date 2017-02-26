@@ -17,6 +17,12 @@ const   CURRENT_POLICY_ID_KEY	= "currentPolicyId"
 const	CURRENT_USER_ID_KEY	= "currentUserId"
 const   CURRENT_CLAIM_ID_KEY	= "currentClaimId"
 
+//Used to store all current approved garages
+const	APPROVED_GARAGES_KEY	= "approvedGarages"
+
+//Stored the chaincodeId of the CRUD chaincode
+const CRUD_CHAINCODE_ID_KEY = "CRUD_CHAINCODE_ID"
+
 //==============================================================================================================================
 //	 Prefixes for the different domain object type ids
 //==============================================================================================================================
@@ -24,16 +30,15 @@ const   POLICY_ID_PREFIX	= "P"
 const	USER_ID_PREFIX		= "U"
 const   CLAIM_ID_PREFIX		= "C"
 
-const CRUD_ID_KEY = "CRUD_ID_KEY"
-
 const SAVE_FUNCTION = "save"
 const RETRIEVE_FUNCTION = "retrieve"
 
 type Dao struct {}
 
 func InitDao(stub shim.ChaincodeStubInterface, crudChaincodeId string) {
-	stub.PutState(CRUD_ID_KEY, []byte(crudChaincodeId))
+	stub.PutState(CRUD_CHAINCODE_ID_KEY, []byte(crudChaincodeId))
 	configureIdState(stub)
+	configureApprovedGaragesState(stub)
 }
 
 func SavePolicy(stub shim.ChaincodeStubInterface, policy Policy) (Policy, error) {
@@ -90,15 +95,9 @@ func SaveClaim(stub shim.ChaincodeStubInterface, claim Claim) (Claim, error) {
 func RetrieveClaim(stub shim.ChaincodeStubInterface, id string) (Claim, error){
 	var claim Claim
 
-	bytes, err := retrieve(stub, id)
+	err := retrieveObject(stub, id, claim)
 
-	if err != nil {	fmt.Printf("RetrieveClaim: Cannot retrieve claim: %s", err); return claim, err}
-
-	err = unmarshal(bytes, &claim);
-
-	if err != nil {	fmt.Printf("RetrieveClaim: Cannot marshall claim: %s", err); return claim, err}
-
-	return claim, nil
+	return claim, err
 }
 
 func RetrieveAllClaims(stub shim.ChaincodeStubInterface) ([]Claim){
@@ -136,6 +135,54 @@ func RetrieveVehicle(stub shim.ChaincodeStubInterface, id string) (Vehicle, erro
 	err := retrieveObject(stub, id, vehicle)
 
 	return vehicle, err
+}
+
+func SaveUser(stub shim.ChaincodeStubInterface, user User) (User, error) {
+	if user.Id == "" {
+		userId := getNextUserId(stub)
+
+		user.Id = userId
+	}
+
+	err := saveObject(stub, user.Id, user)
+
+	return user, err
+}
+
+func RetrieveUser(stub shim.ChaincodeStubInterface, id string) (User, error){
+	var user User
+
+	err := retrieveObject(stub, id, user)
+
+	return user, err
+}
+
+func SaveApprovedGarages(stub shim.ChaincodeStubInterface, approvedGarages ApprovedGarages) (ApprovedGarages, error) {
+	err := saveObject(stub, APPROVED_GARAGES_KEY, approvedGarages)
+
+	return approvedGarages, err
+}
+
+func RetrieveApprovedGarages(stub shim.ChaincodeStubInterface) (ApprovedGarages, error){
+	var approvedGarages ApprovedGarages
+
+	err := retrieveObject(stub, APPROVED_GARAGES_KEY, approvedGarages)
+
+	return approvedGarages, err
+}
+
+//=================================================================================================================================
+//	 AppendApprovedGarages		-	Appends approved garages to the list of approved garages in the ledger
+//=================================================================================================================================
+func AppendApprovedGarages(stub shim.ChaincodeStubInterface, newGarages []string) (error){
+	approvedGarages, err := RetrieveApprovedGarages(stub)
+	if (err != nil) { return err }
+
+	approvedGarages.Garages = append(approvedGarages.Garages, newGarages...)
+
+	_, err = SaveApprovedGarages(stub, approvedGarages)
+
+	return err
 }
 
 func retrieve(stub shim.ChaincodeStubInterface, id string) ([]byte, error) {
@@ -195,7 +242,7 @@ func unmarshal(data []byte, object interface{}) (error){
 }
 
 func getCrudChaincodeId(stub shim.ChaincodeStubInterface) (string) {
-	bytes, _ := stub.GetState(CRUD_ID_KEY)
+	bytes, _ := stub.GetState(CRUD_CHAINCODE_ID_KEY)
 	return string(bytes)
 }
 
@@ -254,5 +301,17 @@ func configureIdState(stub shim.ChaincodeStubInterface) {
 		fmt.Println("No existing policy id key, adding all....")
 		save(stub, CURRENT_POLICY_ID_KEY, []byte("2"))
 		save(stub, CURRENT_CLAIM_ID_KEY, []byte("0"))
+		save(stub, CURRENT_USER_ID_KEY, []byte("2"))
+	}
+}
+
+func configureApprovedGaragesState(stub shim.ChaincodeStubInterface) {
+	bytes, err := retrieve(stub, APPROVED_GARAGES_KEY)
+	if (err != nil || len(bytes) == 0) {
+		fmt.Println("No existing approved garages entry exists, adding empty approved garages")
+		var approvedGarages ApprovedGarages
+		approvedGarages.Garages = []string{}
+
+		saveObject(stub, APPROVED_GARAGES_KEY, approvedGarages)
 	}
 }
