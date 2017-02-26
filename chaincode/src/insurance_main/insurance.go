@@ -685,7 +685,7 @@ func (t *InsuranceChaincode) processConfirmPaidOut(stub shim.ChaincodeStubInterf
 func (t *InsuranceChaincode) isApprovedGarage(stub shim.ChaincodeStubInterface, garage string) bool {
 
 	approvedGarages, err := RetrieveApprovedGarages(stub)
-	if err != nil {	fmt.Printf("IS_APPROVED_GARAGE: Corrupt garages record "+string(bytes)+": %s", err); return false}
+	if err != nil {	fmt.Printf("IS_APPROVED_GARAGE: Unable to retrieve the approved garages: %s", err); return false}
 
     for _, appGarage := range approvedGarages.Garages {
 		fmt.Printf("Approved Garage: %s\n", appGarage)
