@@ -56,7 +56,7 @@ func SavePolicy(stub shim.ChaincodeStubInterface, policy Policy) (Policy, error)
 func RetrievePolicy(stub shim.ChaincodeStubInterface, id string) (Policy, error){
 	var policy Policy
 
-	err := retrieveObject(stub, id, policy)
+	err := retrieveObject(stub, id, &policy)
 
 	return policy, err
 }
@@ -95,7 +95,7 @@ func SaveClaim(stub shim.ChaincodeStubInterface, claim Claim) (Claim, error) {
 func RetrieveClaim(stub shim.ChaincodeStubInterface, id string) (Claim, error){
 	var claim Claim
 
-	err := retrieveObject(stub, id, claim)
+	err := retrieveObject(stub, id, &claim)
 
 	return claim, err
 }
@@ -132,7 +132,7 @@ func SaveVehicle(stub shim.ChaincodeStubInterface, vehicle Vehicle) (Vehicle, er
 func RetrieveVehicle(stub shim.ChaincodeStubInterface, id string) (Vehicle, error){
 	var vehicle Vehicle
 
-	err := retrieveObject(stub, id, vehicle)
+	err := retrieveObject(stub, id, &vehicle)
 
 	return vehicle, err
 }
@@ -152,7 +152,7 @@ func SaveUser(stub shim.ChaincodeStubInterface, user User) (User, error) {
 func RetrieveUser(stub shim.ChaincodeStubInterface, id string) (User, error){
 	var user User
 
-	err := retrieveObject(stub, id, user)
+	err := retrieveObject(stub, id, &user)
 
 	return user, err
 }
@@ -166,7 +166,7 @@ func SaveApprovedGarages(stub shim.ChaincodeStubInterface, approvedGarages Appro
 func RetrieveApprovedGarages(stub shim.ChaincodeStubInterface) (ApprovedGarages, error){
 	var approvedGarages ApprovedGarages
 
-	err := retrieveObject(stub, APPROVED_GARAGES_KEY, approvedGarages)
+	err := retrieveObject(stub, APPROVED_GARAGES_KEY, &approvedGarages)
 
 	return approvedGarages, err
 }
@@ -192,11 +192,11 @@ func retrieve(stub shim.ChaincodeStubInterface, id string) ([]byte, error) {
 func retrieveObject(stub shim.ChaincodeStubInterface, id string, toStoreObject interface{}) (error){
 	bytes, err := retrieve(stub, id)
 
-	if err != nil {	fmt.Printf("RetrievePolicy: Cannot retrieve object with id: " + id + " : %s", err); return err}
+	if err != nil {	fmt.Printf("RetrieveObject: Cannot retrieve object with id: " + id + " : %s", err); return err}
 
-	err = unmarshal(bytes, &toStoreObject);
+	err = unmarshal(bytes, toStoreObject)
 
-	if err != nil {	fmt.Printf("RetrievePolicy: Cannot unmarshall object with id: " + id + " : %s", err); return err}
+	if err != nil {	fmt.Printf("RetrieveObject: Cannot unmarshall object with id: " + id + " : %s", err); return err}
 
 	return nil
 }

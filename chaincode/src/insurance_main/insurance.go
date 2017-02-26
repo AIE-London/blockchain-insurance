@@ -76,7 +76,7 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 		return t.agreePayoutAmount(stub, caller, caller_affiliation, args)
 	} else if function == "vehicleValueOracleCallback" {
 		fmt.Printf("vehicleValueOracleCallback: ReqeustId / Value" + args[0] + " / " + args[1]);
-		return nil, t.vehicleValueOracleCallback(stub, caller, caller_affiliation, args)
+		return t.vehicleValueOracleCallback(stub, caller, caller_affiliation, args)
 	} else if function == "confirmPaidOut" {
 		return t.confirmPaidOut(stub, caller, caller_affiliation, args)
 	} else if function == "closeClaim" {
@@ -252,9 +252,9 @@ func (t *InsuranceChaincode) isPolicyRelevantToCaller(stub shim.ChaincodeStubInt
 	if caller_affiliation == ROLE_INSURER { return true }
 
 	//Is policy owned by caller?
-	if caller == policy.Relations.Owner {fmt.Printf("Policy owner and caller match, policy is relevant"); return true}
+	if caller == policy.Relations.Owner {fmt.Println("Policy owner and caller match, policy is relevant"); return true}
 
-	fmt.Printf("Policy owner and caller do not match, policy is not relevant")
+	fmt.Println("Policy owner and caller do not match, policy is not relevant - " + caller + " : " + policy.Relations.Owner)
 	return false
 }
 
@@ -329,35 +329,26 @@ func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInte
 //	 vehicleValueOracleCallback - Callback, called by an oracle when a vehicle value has been retreived
 //		args - requestId, vehicleValue
 //==============================================================================================================================
-func (t *InsuranceChaincode) vehicleValueOracleCallback(stub shim.ChaincodeStubInterface, caller string, callerAffiliation string, args []string) (error) {
+func (t *InsuranceChaincode) vehicleValueOracleCallback(stub shim.ChaincodeStubInterface, caller string, callerAffiliation string, args []string) ([]byte, error) {
 
 	if callerAffiliation != ROLE_ORACLE {
 		fmt.Printf("vehicleValueCallback: Called from non oracle user")
-		return errors.New("vehicleValueCallback: Called from non oracle user")
+		return nil, errors.New("vehicleValueCallback: Called from non oracle user")
 	}
-
-	return t.vehicleValueCallback(stub, args)
-}
-
-//==============================================================================================================================
-//	 vehicleValueCallback - Callback for when a vehicle value has been retreived
-//		args - requestId, vehicleValue
-//==============================================================================================================================
-func (t *InsuranceChaincode) vehicleValueCallback(stub shim.ChaincodeStubInterface, args []string) (error) {
 
 	vehicleValue, err := strconv.Atoi(args[1])
 
-	if err != nil {	fmt.Printf("vehicleValueCallback: Cannot parse car value %s", err); return errors.New("vehicleValueCallback: Cannot parse car value")}
+	if err != nil {	fmt.Printf("vehicleValueCallback: Cannot parse car value %s", err); return nil, errors.New("vehicleValueCallback: Cannot parse car value")}
 
 	bytes, err := stub.GetState(args[0])
 
-	if err != nil {	fmt.Printf("vehicleValueCallback: Cannot read claim id from callback state: %s", err); return errors.New("vehicleValueCallback: Cannot read claim from callback state")}
+	if err != nil {	fmt.Printf("vehicleValueCallback: Cannot read claim id from callback state: %s", err); return nil, errors.New("vehicleValueCallback: Cannot read claim from callback state")}
 
 	claimId := string(bytes)
 
-	t.afterVehicleValueObtainedProcess(stub, claimId, vehicleValue)
+	claim, err := RetrieveClaim(stub , claimId)
 
-	return err
+	return t.afterVehicleValueObtainedProcess(stub, claim, vehicleValue)
 }
 
 func (t *InsuranceChaincode) queryOracleForVehicleValue(stub shim.ChaincodeStubInterface, claim Claim, vehicle Vehicle) {
@@ -367,8 +358,8 @@ func (t *InsuranceChaincode) queryOracleForVehicleValue(stub shim.ChaincodeStubI
 
 	if err != nil {
 		fmt.Println("Error querying oracle for vehicle value: %s", err);
-		fmt.Println("Calling callback with default value")
-		t.vehicleValueCallback(stub, []string{stub.GetTxID(), "5555"})
+		fmt.Println("Processing with default value")
+		t.afterVehicleValueObtainedProcess(stub, claim, 5555)
 	}
 }
 
@@ -502,13 +493,9 @@ func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface
 //=========================================================================================
 // This Function process the claim after a report has arrived
 //=========================================================================================
-func (t *InsuranceChaincode) afterVehicleValueObtainedProcess(stub shim.ChaincodeStubInterface, claimId string, vehicleValue int) ([]byte, error) {
+func (t *InsuranceChaincode) afterVehicleValueObtainedProcess(stub shim.ChaincodeStubInterface, theClaim Claim, vehicleValue int) ([]byte, error) {
 	fmt.Println("running afterVehicleValueObtainedProcess()")
-	
-	theClaim, err := RetrieveClaim(stub , claimId)
-	
-	if err != nil {	fmt.Printf("\nAFTER_VALUE_PROCESS: Failed to retrieve claim Id: %s", err); return nil, errors.New("AFTER_VALUE_PROCESS: Error retrieving claim with claimId = " + claimId) }
-	
+
 	if theClaim.Details.Status == STATE_PENDING_AFTER_REPORT_DECISION{
 
 		if theClaim.Details.Report.WriteOff || theClaim.Details.Report.Estimate > (vehicleValue * 50 / 100) {
@@ -518,6 +505,9 @@ func (t *InsuranceChaincode) afterVehicleValueObtainedProcess(stub shim.Chaincod
 			theClaim.Details.Status = STATE_ORDER_GARAGE_WORK
 			SaveClaim(stub, theClaim)
 		}
+	} else {
+		fmt.Println("AFTER_VALUE_PROCESS: Claim in invalid state: " + theClaim.Details.Status);
+		return nil, errors.New("AFTER_VALUE_PROCESS: Claim in invalid state: " + theClaim.Id)
 	}
 		
 	return nil, nil
@@ -546,7 +536,7 @@ func (t *InsuranceChaincode) processTotalLoss(stub shim.ChaincodeStubInterface, 
 //=========================================================================================
 // This Function set the claimant aggreement in the payout
 //=========================================================================================
-func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
+func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 	fmt.Println("running agreePayoutAmount()")
 
     //
@@ -578,10 +568,14 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 		theClaim.Details.Status = STATE_SETTLED
 		theClaim.Details.Settlement.Dispute = false
 
+		//Add pending payment to claim
+		theClaim, err = t.addPendingPayment(stub, theClaim)
+
 		policy, _ := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy)
 		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, policy.Relations.Owner)
 
 		eventBytes, err := json.Marshal(event);
+		if err != nil {fmt.Printf("AGREE_PAYOUT_AMOUNT Error: Unable to add pending payment: %s\n", err); return nil, err}
 
 		if (err != nil) {
 			fmt.Printf("\nAGREE_PAYOUT_AMOUNT: Unable to parse event, continuing without emitting", err)
@@ -600,35 +594,19 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 //=========================================================================================
 // This Function marks the claim as paid
 //=========================================================================================
-func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error) {
-	fmt.Println("running approvePaymentOut()")
+func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface, theClaim Claim) (Claim, error) {
+	fmt.Println("running addPendingPayment()")
 
-    if caller_affiliation != ROLE_INSURER {
-		fmt.Printf("\nconfirmPaidOut: Caller is not an insurer")
-		return nil, errors.New("\nconfirmPaidOut: Caller is not an insurer")
-	}
-
-	if len(args) != 1 {
-		fmt.Println("APPROVE_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
-		return nil, errors.New("APPROVE_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
-	}
-
-    var theClaim Claim
-	
-	theClaim, err := RetrieveClaim(stub , args[0])
-	
-	if err != nil {	fmt.Printf("\nAPPROVE_PAYMENT_OUT: Failed to retrieve claim Id: %s\n", err); return nil, errors.New("APPROVE_PAYMENT_OUT: Error retrieving claim with claimId = " + args[0]) }
-	
 	if theClaim.Details.Status != STATE_SETTLED{
 		fmt.Println("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
-		return nil, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
+		return theClaim, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
 	}
 
 	policy, err := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy);
 
 	if err != nil {
 		fmt.Printf("APPROVE_PAYMENT_OUT: Error getting policy with id %s", theClaim.Relations.RelatedPolicy);
-		return nil, errors.New("Policy doesnt exist");
+		return theClaim, errors.New("Policy doesnt exist");
 	}
 
 	var payment ClaimDetailsSettlementPayment
@@ -638,45 +616,42 @@ func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface,  c
 	payment = NewClaimDetailsSettlementPayment(RECIPIENT_TYPE_CLAIMANT, policy.Relations.Owner, Amount, STATE_NOT_PAID)
 
 	theClaim.Details.Settlement.Payments = make([]ClaimDetailsSettlementPayment, 1)
-	theClaim.Details.Settlement.Payments[0] = payment	
-	SaveClaim(stub, theClaim)
+	theClaim.Details.Settlement.Payments[0] = payment
 
-	return t.processConfirmPaidOut(stub, caller, caller_affiliation, args)
-
+	return theClaim, nil
 }
 
-//===========================================================================================
-// This method sets the claim to paid
-// The Claim must be in the state 'STATE_SETTLED and the PAYMENT in the state STATE_NOT_PAID
-//===========================================================================================
-func (t *InsuranceChaincode) processConfirmPaidOut(stub shim.ChaincodeStubInterface,  caller string, caller_affiliation string, args []string) ([]byte, error){
+//=========================================================================================
+// This Function marks the claim as paid
+//=========================================================================================
+func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error){
+
+	fmt.Println("running confirmPaidOut()")
+
+	if caller_affiliation != ROLE_INSURER {
+		fmt.Printf("\nconfirmPaidOut: Caller is not an insurer")
+		return nil, errors.New("\nconfirmPaidOut: Caller is not an insurer")
+	}
 
 	if len(args) != 1 {
-		fmt.Println("PROCESS_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
-		return nil, errors.New("PROCESS_PAYMENT_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
+		fmt.Println("CONFIRM_PAID_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
+		return nil, errors.New("CONFIRM_PAID_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
 	}
 
-    var theClaim Claim
-	
 	theClaim, err := RetrieveClaim(stub , args[0])
-	
-	if err != nil {	fmt.Printf("\nPROCESS_PAYMENT_OUT: Failed to retrieve claim Id: %s\n", err); return nil, errors.New("PROCESS_PAYMENT_OUT: Error retrieving claim with claimId = " + args[0]) }
-	
-	if theClaim.Details.Status != STATE_SETTLED{
-		fmt.Println("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
-		return nil, errors.New("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
-	}
+
+	if err != nil {fmt.Println("Unable to retrieve claim with id: " + args[0]); return nil, err}
 
 	if theClaim.Details.Status != STATE_SETTLED{
-		fmt.Println("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
-		return nil, errors.New("PROCESS_PAYMENT_OUT: Unexpected input for this STATE")
+		fmt.Println("CONFIRM_PAID_OUT: Unexpected input for this STATE")
+		return nil, errors.New("CONFIRM_PAID_OUT: Unexpected input for this STATE")
 	}
 	
 	// Assumption: there should be only one payment
 	theClaim.Details.Settlement.Payments[0].Status = STATE_PAID
-	SaveClaim(stub, theClaim)
+	_, err = SaveClaim(stub, theClaim)
 	
-	return nil, nil
+	return nil, err
 }
 
 //===============================================================================
