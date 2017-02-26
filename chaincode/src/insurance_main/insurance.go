@@ -54,7 +54,6 @@ func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function str
 	InitReferenceData(stub)
 
 	stub.PutState(CURRENT_USER_ID_KEY, []byte("0"))
-	stub.PutState(CURRENT_CLAIM_ID_KEY, []byte("0"))
 
 	t.initSetup(stub)
 
@@ -145,17 +144,11 @@ func (t *InsuranceChaincode) addVehicle(stub shim.ChaincodeStubInterface, caller
 	}
 
 	mileage, _ := strconv.Atoi(args[4])
-	vehicle := NewVehicle(args[2], args[0], args[1], args[2], args[3], mileage, args[5])
+	vehicle := NewVehicle(args[2], args[0], args[1], args[3], mileage, args[5])
 
-	bytes, err := json.Marshal(vehicle)
+	_, err := SaveVehicle(stub, vehicle)
 
-	if err != nil { fmt.Printf("addVehicle Error converting vehicle record: %s", err); return nil, errors.New("Error converting vehicle record") }
-
-	err = stub.PutState(vehicle.Id, bytes)
-
-	if err != nil { fmt.Printf("addVehicle: Error storing vehicle record: %s", err); return nil, errors.New("Error storing vehicle record") }
-
-	return nil, nil
+	return nil, err
 }
 
 //=================================================================================================================================
@@ -381,38 +374,6 @@ func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInte
 }
 
 //==============================================================================================================================
-//	 retrieveVehicle- Gets the state of the data at vehicleId in the ledger then converts it from the stored
-//					JSON into the Vehicle struct for use in the contract. Returns the Vehicle struct.
-//					Returns empty vehicle if it errors.
-//==============================================================================================================================
-func (t *InsuranceChaincode) retrieveVehicle(stub shim.ChaincodeStubInterface, vehicleId string) (Vehicle, error) {
-
-	var aVehicle Vehicle
-
-	bytes, err := t.retrieveVehicleJSON(stub, vehicleId)
-
-	if err != nil {	fmt.Printf("retrieveVehicle: Cannot read vehicle: %s", err); return aVehicle, errors.New("retrieveVehicle: Cannot read vehicle")}
-
-	err = json.Unmarshal(bytes, &aVehicle);
-
-	if err != nil {	fmt.Printf("retrieveVehicle: Corrupt vehicle record "+string(bytes)+": %s", err); return aVehicle, errors.New("retrieveVehicle: Corrupt vehicle record"+string(bytes))}
-
-	return aVehicle, nil
-}
-
-//==============================================================================================================================
-//	 retrieveVehicleJSON - Gets the state of the data at vehicleId in the ledger and returns the JSON representation
-//==============================================================================================================================
-func (t *InsuranceChaincode) retrieveVehicleJSON(stub shim.ChaincodeStubInterface, vehicleId string) ([]byte, error) {
-
-	bytes, err := stub.GetState(vehicleId)
-
-	if err != nil {	fmt.Printf("retrieveVehicleJSON: Failed to invoke: %s", err); return nil, errors.New("retrieveVehicleJSON: Error retrieving vehicle with id = " + vehicleId) }
-
-	return bytes, nil
-}
-
-//==============================================================================================================================
 //	 vehicleValueOracleCallback - Callback, called by an oracle when a vehicle value has been retreived
 //		args - requestId, vehicleValue
 //==============================================================================================================================
@@ -497,11 +458,6 @@ func (t *InsuranceChaincode) getCurrentIdNumber(stub shim.ChaincodeStubInterface
 // Sets up all the data on deployment of chaincode
 //==============================================================================================================================
 func (t *InsuranceChaincode)initSetup(stub shim.ChaincodeStubInterface) {
-
-	//Vehicle init data
-	t.addVehicle(stub, VehicleCaller1, VehicleCallerAffiliation1, VehicleArgs1)
-
-	t.addVehicle(stub, VehicleCaller2, VehicleCallerAffiliation2, VehicleArgs2)
 
 	//User init data
 	completeUserArgs1 := append(UserArgs1, "P1")
@@ -637,7 +593,7 @@ func (t *InsuranceChaincode) shouldAcceptGarageReportForClaim(stub shim.Chaincod
 func (t *InsuranceChaincode) afterReportProcess(stub shim.ChaincodeStubInterface, claim Claim) {
 	//Get vehicle
 	policy, _ := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
-	vehicle, _ := t.retrieveVehicle(stub, policy.Relations.Vehicle)
+	vehicle, _ := RetrieveVehicle(stub, policy.Relations.Vehicle)
 
 	t.queryOracleForVehicleValue(stub, claim, vehicle)
 }

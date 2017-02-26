@@ -8,18 +8,11 @@ func InitReferenceData(stub shim.ChaincodeStubInterface) (error) {
 	SavePolicy(stub, NewPolicy("P1", "claimant1", "31/01/17", "30/01/18", 300, "BP08BRV"))
 	SavePolicy(stub, NewPolicy("P2", "claimant2", "11/01/17", "10/01/18", 250, "DZ14TYV"))
 
+	SaveVehicle(stub, NewVehicle("BP08BRV", "Ford", "Focus", "2008", 55000, "100924404"))
+	SaveVehicle(stub, NewVehicle("DZ14TYV", "Audi", "TT", "2014", 20000, "200481078"))
+
 	return nil
 }
-
-//Vehicle1 data
-var VehicleArgs1 = []string{"Ford", "Focus", "BP08BRV", "2008", "55000", "100924404"}
-var VehicleCaller1 = "claimant1"
-var VehicleCallerAffiliation1 = "group1"
-
-//Vehicle2 data
-var VehicleArgs2 = []string{"Audi", "TT", "DZ14TYV", "2014", "20000", "200481078"}
-var VehicleCaller2 = "claimant2"
-var VehicleCallerAffiliation2 = "group1"
 
 //User1 data
 var UserArgs1 = []string{"John", "Hancock", "john.hancock@outlook.com"}

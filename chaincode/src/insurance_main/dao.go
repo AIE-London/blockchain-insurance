@@ -120,6 +120,24 @@ func RetrieveAllClaims(stub shim.ChaincodeStubInterface) ([]Claim){
 	return claims
 }
 
+func SaveVehicle(stub shim.ChaincodeStubInterface, vehicle Vehicle) (Vehicle, error) {
+	if vehicle.Id == "" {
+		vehicle.Id = vehicle.Details.Registration
+	}
+
+	err := saveObject(stub, vehicle.Id, vehicle)
+
+	return vehicle, err
+}
+
+func RetrieveVehicle(stub shim.ChaincodeStubInterface, id string) (Vehicle, error){
+	var vehicle Vehicle
+
+	err := retrieveObject(stub, id, vehicle)
+
+	return vehicle, err
+}
+
 func retrieve(stub shim.ChaincodeStubInterface, id string) ([]byte, error) {
 	return query(stub, getCrudChaincodeId(stub), RETRIEVE_FUNCTION, []string{id})
 }
