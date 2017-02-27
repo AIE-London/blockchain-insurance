@@ -20,6 +20,21 @@
     "type": {
       "type": "string",
       "enum": ["Single Party", "Liability"]
+    },
+    "multiParty":{
+      "type": "object",
+      "properties": {
+        "atFault": "boolean",
+        "otherPartyReg": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 15
+        }
+      },
+      "required": [
+        "otherPartyReg"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
