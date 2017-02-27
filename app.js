@@ -20,19 +20,19 @@ var oracle = require('./utils/blockchain/oracle');
 var claimService = require('./utils/blockchain/claimService');
 var garageService = require('./utils/blockchain/garageService');
 var policyService = require('./utils/blockchain/policyService');
+var eventListener = require('./utils/blockchain/insuranceEventListener')
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
 
 // Create Server
 var app = express();
-
 var server = http.createServer(app);
 socketIntegration.initialise(server);
 server.listen(process.env.PORT || 3000);
 
-
 blockchainSetup.setupNetwork();
+eventListener.init();
 
 /**
  * JSON Schema Validation
@@ -505,13 +505,13 @@ app.get('/' + apiPath.base + '/oracle/vehicle/:styleId/value', function(request,
   var styleId = request.params.styleId;
 
   oracle.requestVehicleValuation(requestId, styleId, mileage, callbackFunctionName, function() {
-    response.setHeader('Content-Type', 'application/json');
-    response.write(JSON.stringify(responseBody));
-    response.statusCode = 202;
-    response.end();
-    return;
+    console.log("All good from Oracle: " + request.query.requestId);
   });
 
+  response.setHeader('Content-Type', 'application/json');
+  response.write(JSON.stringify(responseBody));
+  response.statusCode = 202;
+  response.end();
   return;
 
 });

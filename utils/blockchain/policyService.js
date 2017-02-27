@@ -5,6 +5,25 @@ var getFullHistory = function(username, callback){
   blockchainService.query("retrieveAllPolicies", [], username, callback);
 };
 
+//For now we're getting all the policies and iterating but this is obviously inefficient.
+//We should add a query to the chaincode for a specific policy id
+var getPolicyWithId = function(policyId, username, callback) {
+  getFullHistory(username, function(policies) {
+    console.log(policies);
+
+    for (var i = 0; i < policies.length; i++) {
+      if (policies[i].id == policyId) {
+        callback(policyId);
+        return
+      }
+    }
+
+    //policy not found
+    return callback();
+  });
+}
+
 module.exports = {
-  getFullHistory: getFullHistory
+  getFullHistory: getFullHistory,
+  getPolicyWithId: getPolicyWithId
 };

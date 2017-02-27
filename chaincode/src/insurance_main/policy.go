@@ -38,8 +38,8 @@ type PolicyRelations struct {
 func NewPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
 	var policy Policy
 
-	policy.Id = id
 	policy.Type = "policy"
+	policy.Id = id
 
 	policy.Details.StartDate = startDate
 	policy.Details.EndDate = endDate
