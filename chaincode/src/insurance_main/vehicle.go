@@ -24,10 +24,10 @@ type VehicleDetails struct {
 //=================================================================================================================================
 //	 New Vehicle	-	Constructs a new vehicle
 //=================================================================================================================================
-func NewVehicle(id string, make string, model string, registration string, year string, mileage int, styleId string) (Vehicle) {
+func NewVehicle(registration string, make string, model string, year string, mileage int, styleId string) (Vehicle) {
 	var vehicle Vehicle
 
-	vehicle.Id = id
+	vehicle.Id = registration
 	vehicle.Type = "vehicle"
 
 	vehicle.Details.Make = make

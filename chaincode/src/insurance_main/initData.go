@@ -1,34 +1,28 @@
 package main
 
-//Policy1 data
-var PolicyArgs1 = []string{"31/01/17", "30/01/18", "300", "BP08BRV"}
-var PolicyCaller1 = "claimant1"
-var PolicyCallerAffiliation1 = "group1"
+import (
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+)
 
-//Policy2 data
-var PolicyArgs2 = []string{"11/01/17", "10/01/18", "250", "DZ14TYV"}
-var PolicyCaller2 = "claimant2"
-var PolicyCallerAffiliation2 = "group1"
+func InitReferenceData(stub shim.ChaincodeStubInterface) (error) {
+	_, err := SavePolicy(stub, NewPolicy("P1", "claimant1", "31/01/17", "30/01/18", 300, "BP08BRV"))
+	if err != nil{ return err }
+	_, err = SavePolicy(stub, NewPolicy("P2", "claimant2", "11/01/17", "10/01/18", 250, "DZ14TYV"))
+	if err != nil{ return err }
 
-//Vehicle1 data
-var VehicleArgs1 = []string{"Ford", "Focus", "BP08BRV", "2008", "55000", "100924404"}
-var VehicleCaller1 = "claimant1"
-var VehicleCallerAffiliation1 = "group1"
+	_, err = SaveVehicle(stub, NewVehicle("BP08BRV", "Ford", "Focus", "2008", 55000, "100924404"))
+	if err != nil{ return err }
+	_, err = SaveVehicle(stub, NewVehicle("DZ14TYV", "Audi", "TT", "2014", 20000, "200481078"))
+	if err != nil{ return err }
 
-//Vehicle2 data
-var VehicleArgs2 = []string{"Audi", "TT", "DZ14TYV", "2014", "20000", "200481078"}
-var VehicleCaller2 = "claimant2"
-var VehicleCallerAffiliation2 = "group1"
+	_, err = SaveUser(stub, NewUser("U1", "John", "Hancock", "john.hancock@outlook.com", "P1"))
+	if err != nil{ return err }
+	_, err = SaveUser(stub, NewUser("U2", "Jane", "Doe", "jane.doe@outlook.com", "P2"))
+	if err != nil{ return err }
 
-//User1 data
-var UserArgs1 = []string{"John", "Hancock", "john.hancock@outlook.com"}
-var UserCaller1 = "claimant1"
-var UserCallerAffiliation1 = "group1"
+	var approvedGarages ApprovedGarages
+	approvedGarages.Garages = []string{"garage1", "garage2", "garage3"}
+	_, err = SaveApprovedGarages(stub, approvedGarages)
 
-//User2 data
-var UserArgs2 = []string{"Jane", "Doe", "jane.doe@outlook.com"}
-var UserCaller2 = "claimant2"
-var UserCallerAffiliation2 = "group1"
-
-//ApprovedGarage data
-var ApprovedGaragesData = []string{"garage1", "garage2", "garage3"}
+	return err
+}
