@@ -66,6 +66,8 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 		return t.addPolicy(stub, caller, caller_affiliation, args)
 	} else if function == "createClaim" {
 		return t.createClaim(stub, caller, caller_affiliation, args)
+	} else if function == "declareLiability" {
+		return t.declareLiability(stub, caller, caller_affiliation, args)
 	} else if function == "addPoliceReport" {
 		//TODO
 	} else if function == "addGarageReport" {
@@ -487,6 +489,89 @@ func (t *InsuranceChaincode) check_affiliation(stub shim.ChaincodeStubInterface)
 	affiliation, err := stub.ReadCertAttribute("role");
 	if err != nil { return "", errors.New("Couldn't get attribute 'role'. Error: " + err.Error()) }
 	return string(affiliation), nil
+}
+
+//==============================================================================================================================
+//	 declareLiability - A function called by a claimant to accept or dispute liability in a multi party accident
+//   args{claimId, acceptLiability}
+//==============================================================================================================================
+func (t *InsuranceChaincode) declareLiability(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
+
+	fmt.Println("running addLiabilityDeclaration()")
+
+	if len(args) != 2 {
+		fmt.Println("addLiabilityDeclaration: Incorrect number of arguments. Expecting 2 (claimId, acceptLiability)")
+		return nil, errors.New("addLiabilityDeclaration: Incorrect number of arguments. Expecting 2 (claimId, acceptLiability)")
+	}
+
+	// Get the claim
+	var claimId string = args[0]
+
+	claim, err := RetrieveClaim(stub, claimId)
+
+	if err != nil {
+		fmt.Printf("\naddLiabilityDeclaration: Failed to retrieve claim Id: %s", err);
+		return nil, errors.New("addLiabilityDeclaration: Error retrieving claim with claimId = " + claimId)
+	}
+
+	//Check everything is valid
+	if !t.shouldAcceptLiabilityDeclarationForClaim(stub, claim, caller) {
+		return nil, errors.New("addLiabilityDeclaration: Invalid. Caller: " + caller + ", status:" + claim.Details.Status)
+	}
+
+	liable, err := strconv.ParseBool(args[1])
+	if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to parse boolean acceptLiability: %s", err); return nil, err}
+
+	return t.processDeclareLiability(stub, claim, liable)
+}
+
+//==============================================================================================================================
+//	 processDeclareLiability - Performs processing on claim when liability has been declared
+//==============================================================================================================================
+func (t *InsuranceChaincode) processDeclareLiability(stub shim.ChaincodeStubInterface, claim Claim, acceptLiability bool) ([]byte, error) {
+	//Liability accepted
+	if (acceptLiability) {
+		status := STATE_AWAITING_GARAGE_REPORT
+		//Update this claims status
+		claim.Details.Status = status
+		_, err := SaveClaim(stub, claim)
+		if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to save claim: %s", err); return nil, err}
+
+		//Update the linked claims status'
+		for _, claimId := range claim.Relations.LinkedClaims {
+			otherClaim, err := RetrieveClaim(stub, claimId)
+			if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to retrieve claim with id: " + claimId + ": %s", err); return nil, err}
+
+			otherClaim.Details.Status = status
+			_, err = SaveClaim(stub, otherClaim)
+			if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to save claim: %s", err); return nil, err}
+		}
+
+	} else {
+		//TODO Some kind of dispute state
+		return nil, errors.New("Liability dispute is currently unsupported")
+	}
+	return nil, nil
+}
+//==============================================================================================================================
+//	 shouldAcceptLiabilityDeclarationForClaim - Checks if liability can be declared for the specified claim and caller
+//==============================================================================================================================
+func (t *InsuranceChaincode) shouldAcceptLiabilityDeclarationForClaim(stub shim.ChaincodeStubInterface, claim Claim, caller string) (bool){
+	if (claim.Details.Status != STATE_AWAITING_LIABILITY_ACCEPTANCE) {
+		fmt.Println("Claim in wrong state for liability declaration: " + claim.Id)
+		return false
+	}
+
+	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
+
+	if err != nil { fmt.Printf("shouldAcceptLiabilityDeclarationForClaim: Cannot retrieve policy: %s", err); return false}
+
+	if policy.Relations.Owner != caller {
+		fmt.Println("Caller is not the owner of the claim: " + caller + " : " + policy.Relations.Owner)
+		return false
+	}
+
+	return true
 }
 
 //==============================================================================================================================
