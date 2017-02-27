@@ -57,13 +57,14 @@ curl -H "Content-Type: application/json" -X POST -d '{
          "ctorMsg": {
              "function": "addPolicy",
              "args": [
+                 "claimant1",
                  "2017-02-08",
                  "2018-02-08",
                  "100",
                  "DZ14TYV"
              ]
          },
-         "secureContext": "claimant1",
+         "secureContext": "insurer1",
 				 "attributes": ["username","role"]
      },
      "id": 2
@@ -85,7 +86,7 @@ curl -H "Content-Type: application/json" -X POST -d '{
                  "P3",
                  "I crashed into a tree",
                  "2017-02-10",
-                 "minor"
+                 "single_party"
              ]
          },
          "secureContext": "claimant1",

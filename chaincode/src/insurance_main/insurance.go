@@ -106,18 +106,22 @@ func (t *InsuranceChaincode) Query(stub shim.ChaincodeStubInterface, function st
 
 //=================================================================================================================================
 //	 Add Policy  - Creates a Policy object and then saves it to the ledger.
-//          args - startDate, endDate, excess, vehicle
+//          args - owner, startDate, endDate, excess, vehicle
 //=================================================================================================================================
 func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running addPolicy()")
 
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 (ActivationDate,ExpiryDate,Excess,VehicleReg)")
+	if len(args) != 5 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 5 (Owner,ActivationDate,ExpiryDate,Excess,VehicleReg)")
 	}
 
-	excess, _ := strconv.Atoi(args[2])
-	policy := NewPolicy("", caller, args[0], args[1], excess, args[3])
+	if caller_affiliation != ROLE_INSURER {
+		return nil, errors.New("Only an insurer can add a new policy")
+	}
+
+	excess, _ := strconv.Atoi(args[3])
+	policy := NewPolicy("", args[0], caller, args[1], args[2], excess, args[4])
 
 	_, err := SavePolicy(stub, policy)
 
@@ -165,14 +169,14 @@ func (t *InsuranceChaincode) addUser(stub shim.ChaincodeStubInterface, caller st
 
 //=================================================================================================================================
 //	 createClaim - Creates a Claim object and then saves it to the ledger.
-//          args - RelatedPolicy,Description,Date,IncidentType
+//          args - RelatedPolicy,Description,Date,IncidentType,OtherPartyReg(Optional),liable(Optional)
 //=================================================================================================================================
 func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running createClaim()")
 
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 (RelatedPolicy,Description, Date, IncidentType)")
+	if len(args) < 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting at least (RelatedPolicy,Description, Date, IncidentType)")
 	}
 
 	claim := NewClaim("", args[0], args[1], args[2], args[3])
@@ -184,9 +188,82 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 		return nil, errors.New("Claim is invalid");
 	}
 
+	if (claim.Details.Incident.Type == SINGLE_PARTY) {
+		claim.Details.Status = STATE_AWAITING_GARAGE_REPORT
+		_, err = SaveClaim(stub, claim)
+
+		return nil, err
+	} else if (claim.Details.Incident.Type == MULTIPLE_PARTIES) {
+		isLiable, err := strconv.ParseBool(args[5])
+		if err != nil { return nil, err }
+		return t.processMultiplePartyClaimCreation(stub, claim, args[4], isLiable)
+	} else {
+		return nil, errors.New("Unsupported claim type: " + claim.Details.Incident.Type)
+	}
+}
+
+//=================================================================================================================================
+//	 processMultiplePartyClaimCreation - Performs additional processing required when creating a multiple party claim
+//=================================================================================================================================
+func (t *InsuranceChaincode) processMultiplePartyClaimCreation(stub shim.ChaincodeStubInterface, claim Claim, otherPartyReg string, liable bool) ([]byte, error) {
+	//Set reg and liable
+	claim.Relations.OtherPartyReg = otherPartyReg
+	claim.Details.IsLiable = liable
+
+	var status = STATE_AWAITING_LIABILITY_ACCEPTANCE
+
+	//If raising party accepts they're liable initially, then skip the acceptance step
+	if liable {
+		status = STATE_AWAITING_GARAGE_REPORT
+	}
+
+	claim.Details.Status = status;
+
+	//Save claim so that id is generated
+	claim, err := SaveClaim(stub, claim)
+	if err != nil { return nil, err}
+
+	policy, _ := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
+	//Get the other party policy
+	otherPartyPolicy, err := t.findPolicyWithVehicleReg(stub, otherPartyReg)
+
+	if err != nil {
+		//TODO: what should we do here???
+		return nil, err
+	}
+
+	//Create claim for other party
+	otherClaim := NewClaim("", otherPartyPolicy.Id, claim.Details.Description, claim.Details.Incident.Date, MULTIPLE_PARTIES)
+	otherClaim.Details.Status = status
+	otherClaim.Relations.OtherPartyReg = policy.Relations.Vehicle
+
+	//Start as the opposite of the initial claim, subject to dispute
+	otherClaim.Details.IsLiable = !liable
+
+	//Link with initial claim
+	otherClaim.Relations.LinkedClaims = append(otherClaim.Relations.LinkedClaims, claim.Id)
+	savedClaim, err := SaveClaim(stub, otherClaim)
+	if err != nil { return nil, err}
+
+	//Finally link saved 'other party' claim with the original claim and save again
+	claim.Relations.LinkedClaims = append(claim.Relations.LinkedClaims, savedClaim.Id)
+
 	_, err = SaveClaim(stub, claim)
 
 	return nil, err
+}
+
+//=================================================================================================================================
+//	 findPolicyWithVehicleReg - Finds a policy based on the vehicle registration
+//=================================================================================================================================
+func (t *InsuranceChaincode) findPolicyWithVehicleReg(stub shim.ChaincodeStubInterface, vehicleReg string) (Policy, error) {
+	policies := RetrieveAllPolicies(stub)
+
+	for _, policy := range policies {
+		if policy.Relations.Vehicle == vehicleReg { return policy, nil }
+	}
+
+	return Policy{}, errors.New("Policy does not exist for registration: " + vehicleReg);
 }
 
 //=================================================================================================================================
