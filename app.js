@@ -20,7 +20,7 @@ var oracle = require('./utils/blockchain/oracle');
 var claimService = require('./utils/blockchain/claimService');
 var garageService = require('./utils/blockchain/garageService');
 var policyService = require('./utils/blockchain/policyService');
-var eventListener = require('./utils/blockchain/insuranceEventListener')
+var eventListener = require('./utils/blockchain/insuranceEventListener');
 
 // Server Imports
 var express = require('express'), http = require('http'), path = require('path'), fs = require('fs');
@@ -29,7 +29,9 @@ var express = require('express'), http = require('http'), path = require('path')
 var app = express();
 var server = http.createServer(app);
 socketIntegration.initialise(server);
-server.listen(process.env.PORT || 3000);
+server.listen(process.env.PORT || 3000, function(){
+  console.log("Ready to go");
+});
 
 blockchainSetup.setupNetwork();
 eventListener.init();
