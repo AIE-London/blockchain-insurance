@@ -39,7 +39,7 @@ curl -H "Content-Type: application/json" -X POST -d '{
         "function":"init",
         "args": ["insurancecrud"]
     },
-    "secureContext": "jim"
+    "secureContext": "insurer1"
   },
   "id": 1
 }' http://localhost:7050/chaincode
