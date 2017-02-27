@@ -17,11 +17,17 @@
     "notes":{
       "type":"string",
       "minLength": 1
+    },
+    "vehicleRegistration": {
+      "type":"string",
+      "minLength": 1,
+      "maxLength": 15
     }
   },
   "required": [
     "claimId",
-    "estimatedCost"
+    "estimatedCost",
+    "vehicleRegistration"
   ],
   "additionalProperties": false
 }
