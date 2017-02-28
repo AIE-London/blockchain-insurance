@@ -2,8 +2,8 @@ var userEndpoint = "http://aston-user-service.eu-gb.mybluemix.net";
 
 var request = require("request");
 
-var authenticate = function(username, password, callback){
-  var requestData = {"username": username, "password": password};
+var authenticate = function(body, callback){
+  var requestData = body;
   request({
     url: userEndpoint + "/auth/user/login",
     method: "POST",

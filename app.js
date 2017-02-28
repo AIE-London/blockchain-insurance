@@ -144,7 +144,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
   var username = request.body.username;
   var password = request.body.password;
 
-  userService.authenticate(username, password, function(rsp){
+  userService.authenticate(body, function(rsp){
 
     if(rsp.details && rsp.details.carInsurance){//Add following to restrict to claimant: && rsp.details.carInsurance.type === "claimant"){
       auth.signJWT(request.body, {secret:"123", name: username}, function(resp){
