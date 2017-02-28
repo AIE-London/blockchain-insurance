@@ -47,6 +47,7 @@ schemas.authSchema = require("./config/schemas/authSchema.json");
 schemas.postClaimSchema = require("./config/schemas/postClaimSchema.json");
 schemas.postGarageReportSchemas = require('./config/schemas/postGarageReportSchema.json');
 schemas.postPayoutAgreementSchema = require('./config/schemas/postPayoutAgreementSchema.json');
+schemas.postCrashNotificationSchema = require('./config/schemas/postCrashNotificationSchema.json');
 
 /**
  * Swagger Configuration
@@ -72,6 +73,7 @@ swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.de
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postClaimSchema.json"), "postClaimSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postGarageReportSchema.json"), "postGarageReportSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postPayoutAgreementSchema.json"), "postPayoutAgreementSchema");
+swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postCrashNotificationSchema.json"), "postCrashNotificationSchema");
 
 /**
  * Environment Configuration
@@ -98,7 +100,7 @@ app.use(logger('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use('/style', express.static(path.join(__dirname, '/views/style')));
-app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/", "/" + apiPath.base + "/oracle*"], auth.middleware));
+app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/", "/" + apiPath.base + "/oracle*", "/crash/notification"], auth.middleware));
 app.use(auth.allowOriginsMiddleware);
 
 
@@ -144,7 +146,7 @@ app.post('/auth/', validate({ body : schemas.authSchema }), function(request, re
   var username = request.body.username;
   var password = request.body.password;
 
-  userService.authenticate(username, password, function(rsp){
+  userService.authenticate(request.body, function(rsp){
 
     if(rsp.details && rsp.details.carInsurance){//Add following to restrict to claimant: && rsp.details.carInsurance.type === "claimant"){
       auth.signJWT(request.body, {secret:"123", name: username}, function(resp){
@@ -367,6 +369,41 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
     return;
 
   });
+});
+
+/**
+ * @swagger
+ * /crash/notification:
+ *   post:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Endpoint for submitting crash notification
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: post-crash-notification-schema
+ *         description: crash notification content
+ *         in: body
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/postCrashNotificationSchema'
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationSchema}), auth.checkAuthorized, function(request, response){
+
+  // TODO: Get policies and match to registration so we can push notify correct user. Templated out for now to prove connectivity and schema validation
+  var responseBody = {};
+
+  responseBody.message = "Success";
+  responseBody.data = request.body;
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'application/json');
+  response.write(JSON.stringify(responseBody));
+  response.end();
+  return;
+
 });
 
 /**

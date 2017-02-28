@@ -66,6 +66,8 @@ func (t *InsuranceChaincode) Invoke(stub shim.ChaincodeStubInterface, function s
 		return t.addPolicy(stub, caller, caller_affiliation, args)
 	} else if function == "createClaim" {
 		return t.createClaim(stub, caller, caller_affiliation, args)
+	} else if function == "declareLiability" {
+		return t.declareLiability(stub, caller, caller_affiliation, args)
 	} else if function == "addPoliceReport" {
 		//TODO
 	} else if function == "addGarageReport" {
@@ -106,18 +108,22 @@ func (t *InsuranceChaincode) Query(stub shim.ChaincodeStubInterface, function st
 
 //=================================================================================================================================
 //	 Add Policy  - Creates a Policy object and then saves it to the ledger.
-//          args - startDate, endDate, excess, vehicle
+//          args - owner, startDate, endDate, excess, vehicle
 //=================================================================================================================================
 func (t *InsuranceChaincode) addPolicy(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running addPolicy()")
 
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 (ActivationDate,ExpiryDate,Excess,VehicleReg)")
+	if len(args) != 5 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 5 (Owner,ActivationDate,ExpiryDate,Excess,VehicleReg)")
 	}
 
-	excess, _ := strconv.Atoi(args[2])
-	policy := NewPolicy("", caller, args[0], args[1], excess, args[3])
+	if caller_affiliation != ROLE_INSURER {
+		return nil, errors.New("Only an insurer can add a new policy")
+	}
+
+	excess, _ := strconv.Atoi(args[3])
+	policy := NewPolicy("", args[0], caller, args[1], args[2], excess, args[4])
 
 	_, err := SavePolicy(stub, policy)
 
@@ -165,14 +171,14 @@ func (t *InsuranceChaincode) addUser(stub shim.ChaincodeStubInterface, caller st
 
 //=================================================================================================================================
 //	 createClaim - Creates a Claim object and then saves it to the ledger.
-//          args - RelatedPolicy,Description,Date,IncidentType
+//          args - RelatedPolicy,Description,Date,IncidentType,OtherPartyReg(Optional),liable(Optional)
 //=================================================================================================================================
 func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
 
 	fmt.Println("running createClaim()")
 
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 (RelatedPolicy,Description, Date, IncidentType)")
+	if len(args) < 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting at least (RelatedPolicy,Description, Date, IncidentType)")
 	}
 
 	claim := NewClaim("", args[0], args[1], args[2], args[3])
@@ -184,9 +190,82 @@ func (t *InsuranceChaincode) createClaim(stub shim.ChaincodeStubInterface, calle
 		return nil, errors.New("Claim is invalid");
 	}
 
+	if (claim.Details.Incident.Type == SINGLE_PARTY) {
+		claim.Details.Status = STATE_AWAITING_GARAGE_REPORT
+		_, err = SaveClaim(stub, claim)
+
+		return nil, err
+	} else if (claim.Details.Incident.Type == MULTIPLE_PARTIES) {
+		isLiable, err := strconv.ParseBool(args[5])
+		if err != nil { return nil, err }
+		return t.processMultiplePartyClaimCreation(stub, claim, args[4], isLiable)
+	} else {
+		return nil, errors.New("Unsupported claim type: " + claim.Details.Incident.Type)
+	}
+}
+
+//=================================================================================================================================
+//	 processMultiplePartyClaimCreation - Performs additional processing required when creating a multiple party claim
+//=================================================================================================================================
+func (t *InsuranceChaincode) processMultiplePartyClaimCreation(stub shim.ChaincodeStubInterface, claim Claim, otherPartyReg string, liable bool) ([]byte, error) {
+	//Set reg and liable
+	claim.Relations.OtherPartyReg = otherPartyReg
+	claim.Details.IsLiable = liable
+
+	var status = STATE_AWAITING_LIABILITY_ACCEPTANCE
+
+	//If raising party accepts they're liable initially, then skip the acceptance step
+	if liable {
+		status = STATE_AWAITING_GARAGE_REPORT
+	}
+
+	claim.Details.Status = status;
+
+	//Save claim so that id is generated
+	claim, err := SaveClaim(stub, claim)
+	if err != nil { return nil, err}
+
+	policy, _ := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
+	//Get the other party policy
+	otherPartyPolicy, err := t.findPolicyWithVehicleReg(stub, otherPartyReg)
+
+	if err != nil {
+		//TODO: what should we do here???
+		return nil, err
+	}
+
+	//Create claim for other party
+	otherClaim := NewClaim("", otherPartyPolicy.Id, claim.Details.Description, claim.Details.Incident.Date, MULTIPLE_PARTIES)
+	otherClaim.Details.Status = status
+	otherClaim.Relations.OtherPartyReg = policy.Relations.Vehicle
+
+	//Start as the opposite of the initial claim, subject to dispute
+	otherClaim.Details.IsLiable = !liable
+
+	//Link with initial claim
+	otherClaim.Relations.LinkedClaims = append(otherClaim.Relations.LinkedClaims, claim.Id)
+	savedClaim, err := SaveClaim(stub, otherClaim)
+	if err != nil { return nil, err}
+
+	//Finally link saved 'other party' claim with the original claim and save again
+	claim.Relations.LinkedClaims = append(claim.Relations.LinkedClaims, savedClaim.Id)
+
 	_, err = SaveClaim(stub, claim)
 
 	return nil, err
+}
+
+//=================================================================================================================================
+//	 findPolicyWithVehicleReg - Finds a policy based on the vehicle registration
+//=================================================================================================================================
+func (t *InsuranceChaincode) findPolicyWithVehicleReg(stub shim.ChaincodeStubInterface, vehicleReg string) (Policy, error) {
+	policies := RetrieveAllPolicies(stub)
+
+	for _, policy := range policies {
+		if policy.Relations.Vehicle == vehicleReg { return policy, nil }
+	}
+
+	return Policy{}, errors.New("Policy does not exist for registration: " + vehicleReg);
 }
 
 //=================================================================================================================================
@@ -413,6 +492,89 @@ func (t *InsuranceChaincode) check_affiliation(stub shim.ChaincodeStubInterface)
 }
 
 //==============================================================================================================================
+//	 declareLiability - A function called by a claimant to accept or dispute liability in a multi party accident
+//   args{claimId, acceptLiability}
+//==============================================================================================================================
+func (t *InsuranceChaincode) declareLiability(stub shim.ChaincodeStubInterface, caller string, caller_affiliation string, args []string) ([]byte, error) {
+
+	fmt.Println("running addLiabilityDeclaration()")
+
+	if len(args) != 2 {
+		fmt.Println("addLiabilityDeclaration: Incorrect number of arguments. Expecting 2 (claimId, acceptLiability)")
+		return nil, errors.New("addLiabilityDeclaration: Incorrect number of arguments. Expecting 2 (claimId, acceptLiability)")
+	}
+
+	// Get the claim
+	var claimId string = args[0]
+
+	claim, err := RetrieveClaim(stub, claimId)
+
+	if err != nil {
+		fmt.Printf("\naddLiabilityDeclaration: Failed to retrieve claim Id: %s", err);
+		return nil, errors.New("addLiabilityDeclaration: Error retrieving claim with claimId = " + claimId)
+	}
+
+	//Check everything is valid
+	if !t.shouldAcceptLiabilityDeclarationForClaim(stub, claim, caller) {
+		return nil, errors.New("addLiabilityDeclaration: Invalid. Caller: " + caller + ", status:" + claim.Details.Status)
+	}
+
+	liable, err := strconv.ParseBool(args[1])
+	if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to parse boolean acceptLiability: %s", err); return nil, err}
+
+	return t.processDeclareLiability(stub, claim, liable)
+}
+
+//==============================================================================================================================
+//	 processDeclareLiability - Performs processing on claim when liability has been declared
+//==============================================================================================================================
+func (t *InsuranceChaincode) processDeclareLiability(stub shim.ChaincodeStubInterface, claim Claim, acceptLiability bool) ([]byte, error) {
+	//Liability accepted
+	if (acceptLiability) {
+		status := STATE_AWAITING_GARAGE_REPORT
+		//Update this claims status
+		claim.Details.Status = status
+		_, err := SaveClaim(stub, claim)
+		if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to save claim: %s", err); return nil, err}
+
+		//Update the linked claims status'
+		for _, claimId := range claim.Relations.LinkedClaims {
+			otherClaim, err := RetrieveClaim(stub, claimId)
+			if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to retrieve claim with id: " + claimId + ": %s", err); return nil, err}
+
+			otherClaim.Details.Status = status
+			_, err = SaveClaim(stub, otherClaim)
+			if err != nil {fmt.Printf("\naddLiabilityDeclaration: Unable to save claim: %s", err); return nil, err}
+		}
+
+	} else {
+		//TODO Some kind of dispute state
+		return nil, errors.New("Liability dispute is currently unsupported")
+	}
+	return nil, nil
+}
+//==============================================================================================================================
+//	 shouldAcceptLiabilityDeclarationForClaim - Checks if liability can be declared for the specified claim and caller
+//==============================================================================================================================
+func (t *InsuranceChaincode) shouldAcceptLiabilityDeclarationForClaim(stub shim.ChaincodeStubInterface, claim Claim, caller string) (bool){
+	if (claim.Details.Status != STATE_AWAITING_LIABILITY_ACCEPTANCE) {
+		fmt.Println("Claim in wrong state for liability declaration: " + claim.Id)
+		return false
+	}
+
+	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
+
+	if err != nil { fmt.Printf("shouldAcceptLiabilityDeclarationForClaim: Cannot retrieve policy: %s", err); return false}
+
+	if policy.Relations.Owner != caller {
+		fmt.Println("Caller is not the owner of the claim: " + caller + " : " + policy.Relations.Owner)
+		return false
+	}
+
+	return true
+}
+
+//==============================================================================================================================
 //	 addGarageReport - This method adds the garage report's details into the claim
 //   args{claimId, garage, estimated_cost,  writeOff, Note}
 //==============================================================================================================================
@@ -543,8 +705,8 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	//TODO - Check the Security  check that this claimant has the right to view and update this claim
 	//
 	if len(args) != 2 {
-		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
-		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+		fmt.Println("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+		return nil, errors.New("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
 	}
 
     var theClaim Claim
@@ -568,10 +730,16 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 		theClaim.Details.Status = STATE_SETTLED
 		theClaim.Details.Settlement.Dispute = false
 
-		//Add pending payment to claim
-		theClaim, err = t.addPendingPayment(stub, theClaim)
+		policy, err := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy)
 
-		policy, _ := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy)
+		if err != nil {
+			fmt.Printf("AGREE_PAYOUT_AMOUNT: Error getting policy with id %s", theClaim.Relations.RelatedPolicy);
+			return nil, errors.New("Policy doesnt exist");
+		}
+
+		//Add pending payment to claim
+		theClaim, err = t.addPendingPayment(stub, theClaim, policy)
+
 		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, policy.Relations.Owner)
 
 		eventBytes, err := json.Marshal(event);
@@ -594,7 +762,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 //=========================================================================================
 // This Function marks the claim as paid
 //=========================================================================================
-func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface, theClaim Claim) (Claim, error) {
+func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface, theClaim Claim, policy Policy) (Claim, error) {
 	fmt.Println("running addPendingPayment()")
 
 	if theClaim.Details.Status != STATE_SETTLED{
@@ -602,18 +770,12 @@ func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface,
 		return theClaim, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
 	}
 
-	policy, err := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy);
-
-	if err != nil {
-		fmt.Printf("APPROVE_PAYMENT_OUT: Error getting policy with id %s", theClaim.Relations.RelatedPolicy);
-		return theClaim, errors.New("Policy doesnt exist");
-	}
-
 	var payment ClaimDetailsSettlementPayment
 	
 	var Amount = theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue - policy.Details.Excess
 
-	payment = NewClaimDetailsSettlementPayment(RECIPIENT_TYPE_CLAIMANT, policy.Relations.Owner, Amount, STATE_NOT_PAID)
+	payment = NewClaimDetailsSettlementPayment(PAYMENT_TYPE_CLAIMANT,
+		policy.Relations.Owner, PAYMENT_TYPE_INSURER, policy.Relations.Insurer, Amount, STATE_NOT_PAID)
 
 	theClaim.Details.Settlement.Payments = make([]ClaimDetailsSettlementPayment, 1)
 	theClaim.Details.Settlement.Payments[0] = payment

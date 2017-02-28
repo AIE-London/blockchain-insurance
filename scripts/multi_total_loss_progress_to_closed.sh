@@ -4,8 +4,11 @@ curl -H "Content-Type: application/json" -X POST -d '{"enrollId": "garage1","enr
 sleep 1
 curl -H "Content-Type: application/json" -X POST -d '{"enrollId": "claimant1","enrollSecret": "123456789123"}' http://localhost:7050/registrar
 sleep 1
+curl -H "Content-Type: application/json" -X POST -d '{"enrollId": "claimant2","enrollSecret": "123456789123"}' http://localhost:7050/registrar
+sleep 1
 curl -H "Content-Type: application/json" -X POST -d '{"enrollId": "insurer1","enrollSecret": "123456789123"}' http://localhost:7050/registrar
 sleep 1
+
 
 printf "\n*** Deploying CRUD chaincode ***\n"
 curl -H "Content-Type: application/json" -X POST -d '{
@@ -61,7 +64,7 @@ curl -H "Content-Type: application/json" -X POST -d '{
                  "2017-02-08",
                  "2018-02-08",
                  "100",
-                 "DZ14TYV"
+                 "BP08BRV"
              ]
          },
          "secureContext": "insurer1",
@@ -86,7 +89,9 @@ curl -H "Content-Type: application/json" -X POST -d '{
                  "P3",
                  "I crashed into a tree",
                  "2017-02-10",
-                 "single_party"
+                 "multiple_parties",
+                 "DZ14TYV",
+                 "false"
              ]
          },
          "secureContext": "claimant1",
@@ -96,7 +101,30 @@ curl -H "Content-Type: application/json" -X POST -d '{
  }' http://localhost:7050/chaincode
 sleep 3
 
-printf "\n*** Adding garage report ***\n"
+printf "\n*** Declare Liability ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "invoke",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "declareLiability",
+             "args": [
+                 "C2",
+                 "true"
+             ]
+         },
+         "secureContext": "claimant2",
+				 "attributes": ["username","role"]
+     },
+     "id": 3
+ }' http://localhost:7050/chaincode
+sleep 3
+
+printf "\n*** Adding garage report for C1 ***\n"
 curl -H "Content-Type: application/json" -X POST -d '{
      "jsonrpc": "2.0",
      "method": "invoke",
@@ -112,6 +140,32 @@ curl -H "Content-Type: application/json" -X POST -d '{
                  "15000",
                  "false",
                  "Half a tree sticking out of the engine",
+                 "BP08BRV"
+             ]
+         },
+         "secureContext": "garage1",
+				 "attributes": ["username","role"]
+     },
+     "id": 3
+ }' http://localhost:7050/chaincode
+sleep 3
+
+printf "\n*** Adding garage report for C2 ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "invoke",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "addGarageReport",
+             "args": [
+                 "C2",
+                 "12000",
+                 "false",
+                 "In a proper mess",
                  "DZ14TYV"
              ]
          },
@@ -122,7 +176,7 @@ curl -H "Content-Type: application/json" -X POST -d '{
  }' http://localhost:7050/chaincode
 sleep 3
 
-printf "\n*** Agreeing to valuation ***\n"
+printf "\n*** Agreeing to valuation for C1 ***\n"
 curl -H "Content-Type: application/json" -X POST -d '{
      "jsonrpc": "2.0",
      "method": "invoke",
@@ -145,7 +199,7 @@ curl -H "Content-Type: application/json" -X POST -d '{
  }' http://localhost:7050/chaincode
 sleep 3
 
-printf "\n*** Confirming Paid ***\n"
+printf "\n*** Agreeing to valuation for C2 ***\n"
 curl -H "Content-Type: application/json" -X POST -d '{
      "jsonrpc": "2.0",
      "method": "invoke",
@@ -155,75 +209,57 @@ curl -H "Content-Type: application/json" -X POST -d '{
              "name": "insurance"
          },
          "ctorMsg": {
-             "function": "confirmPaidOut",
+             "function": "agreePayoutAmount",
              "args": [
-                 "C1"
+                 "C2",
+                 "true"
              ]
          },
-         "secureContext": "insurer1",
+         "secureContext": "claimant1",
 				 "attributes": ["username","role"]
      },
      "id": 3
  }' http://localhost:7050/chaincode
 sleep 3
 
-printf "\n*** Close Claim ***\n"
-curl -H "Content-Type: application/json" -X POST -d '{
-     "jsonrpc": "2.0",
-     "method": "invoke",
-     "params": {
-         "type": 1,
-         "chaincodeID": {
-             "name": "insurance"
-         },
-         "ctorMsg": {
-             "function": "closeClaim",
-             "args": [
-                 "C1"
-             ]
-         },
-         "secureContext": "insurer1",
-				 "attributes": ["username","role"]
-     },
-     "id": 3
- }' http://localhost:7050/chaincode
-sleep 3
- 
-printf "\n*** Retrieving policies ***\n"
-curl -H "Content-Type: application/json" -X POST -d '{
-     "jsonrpc": "2.0",
-     "method": "query",
-     "params": {
-         "type": 1,
-         "chaincodeID": {
-             "name": "insurance"
-         },
-         "ctorMsg": {
-             "function": "retrieveAllPolicies"
-         },
-         "secureContext": "claimant1",
-				 "attributes": ["username","role"]
-     },
-     "id": 4
- }' http://localhost:7050/chaincode
- 
-printf "\n*** Retrieving claims ***\n"
-curl -H "Content-Type: application/json" -X POST -d '{
-     "jsonrpc": "2.0",
-     "method": "query",
-     "params": {
-         "type": 1,
-         "chaincodeID": {
-             "name": "insurance"
-         },
-         "ctorMsg": {
-             "function": "retrieveAllClaims"
-         },
-         "secureContext": "claimant1",
-				 "attributes": ["username","role"]
-     },
-     "id": 3
- }' http://localhost:7050/chaincode
+ printf "\n*** Retrieving claims for claimant1 ***\n"
+ curl -H "Content-Type: application/json" -X POST -d '{
+      "jsonrpc": "2.0",
+      "method": "query",
+      "params": {
+          "type": 1,
+          "chaincodeID": {
+              "name": "insurance"
+          },
+          "ctorMsg": {
+              "function": "retrieveAllClaims"
+          },
+          "secureContext": "claimant1",
+ 				 "attributes": ["username","role"]
+      },
+      "id": 3
+  }' http://localhost:7050/chaincode
+
+   printf "\n*** Retrieving claims for claimant2***\n"
+   curl -H "Content-Type: application/json" -X POST -d '{
+        "jsonrpc": "2.0",
+        "method": "query",
+        "params": {
+            "type": 1,
+            "chaincodeID": {
+                "name": "insurance"
+            },
+            "ctorMsg": {
+                "function": "retrieveAllClaims"
+            },
+            "secureContext": "claimant2",
+   				 "attributes": ["username","role"]
+        },
+        "id": 3
+    }' http://localhost:7050/chaincode
+
+
+
 
 
 
