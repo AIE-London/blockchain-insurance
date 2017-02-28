@@ -705,8 +705,8 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 	//TODO - Check the Security  check that this claimant has the right to view and update this claim
 	//
 	if len(args) != 2 {
-		fmt.Println("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
-		return nil, errors.New("ADD_GARAGE_REPORT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+		fmt.Println("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
+		return nil, errors.New("AGREE_PAYOUT_AMOUNT: Incorrect number of arguments. Expecting 2 (claimId, agreement)")
 	}
 
     var theClaim Claim
@@ -730,10 +730,16 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 		theClaim.Details.Status = STATE_SETTLED
 		theClaim.Details.Settlement.Dispute = false
 
-		//Add pending payment to claim
-		theClaim, err = t.addPendingPayment(stub, theClaim)
+		policy, err := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy)
 
-		policy, _ := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy)
+		if err != nil {
+			fmt.Printf("AGREE_PAYOUT_AMOUNT: Error getting policy with id %s", theClaim.Relations.RelatedPolicy);
+			return nil, errors.New("Policy doesnt exist");
+		}
+
+		//Add pending payment to claim
+		theClaim, err = t.addPendingPayment(stub, theClaim, policy)
+
 		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, policy.Relations.Owner)
 
 		eventBytes, err := json.Marshal(event);
@@ -756,7 +762,7 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 //=========================================================================================
 // This Function marks the claim as paid
 //=========================================================================================
-func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface, theClaim Claim) (Claim, error) {
+func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface, theClaim Claim, policy Policy) (Claim, error) {
 	fmt.Println("running addPendingPayment()")
 
 	if theClaim.Details.Status != STATE_SETTLED{
@@ -764,18 +770,12 @@ func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface,
 		return theClaim, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
 	}
 
-	policy, err := RetrievePolicy(stub, theClaim.Relations.RelatedPolicy);
-
-	if err != nil {
-		fmt.Printf("APPROVE_PAYMENT_OUT: Error getting policy with id %s", theClaim.Relations.RelatedPolicy);
-		return theClaim, errors.New("Policy doesnt exist");
-	}
-
 	var payment ClaimDetailsSettlementPayment
 	
 	var Amount = theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue - policy.Details.Excess
 
-	payment = NewClaimDetailsSettlementPayment(RECIPIENT_TYPE_CLAIMANT, policy.Relations.Owner, Amount, STATE_NOT_PAID)
+	payment = NewClaimDetailsSettlementPayment(PAYMENT_TYPE_CLAIMANT,
+		policy.Relations.Owner, PAYMENT_TYPE_INSURER, policy.Relations.Insurer, Amount, STATE_NOT_PAID)
 
 	theClaim.Details.Settlement.Payments = make([]ClaimDetailsSettlementPayment, 1)
 	theClaim.Details.Settlement.Payments[0] = payment
