@@ -1,9 +1,10 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"strconv"
+	"errors"
 )
 
 //==============================================================================================================================
@@ -67,14 +68,15 @@ type ClaimDetailsSettlementTotalLoss struct {
 
 //==============================================================================================================================
 //	ClaimDetailsSettlementPayment - Defines the structure for a ClaimDetailsSettlementPayment object.
-//==============================================================================================================================
+//============================================	==================================================================================
 type ClaimDetailsSettlementPayment struct {
-	RecipientType	string	`json:"recipientType"`
-	Recipient	string		`json:"recipient"`
-	Amount		int			`json:"amount"`
-	Status		string		`json:"status"`
-	SenderType	string		`json:"senderType"`
-	Sender		string		`json:"sender"`
+	Id				string		`json:"id"`
+	RecipientType	string		`json:"recipientType"`
+	Recipient		string		`json:"recipient"`
+	Amount			int			`json:"amount"`
+	Status			string		`json:"status"`
+	SenderType		string		`json:"senderType"`
+	Sender			string		`json:"sender"`
 }
 
 //==============================================================================================================================
@@ -155,8 +157,36 @@ func NewClaim(id string, relatedPolicy string, description string, incidentDate 
 	claim.Details.Description = description
 	claim.Details.Incident.Date = incidentDate
 	claim.Details.Incident.Type = incidentType
+	claim.Details.Settlement.Payments = []ClaimDetailsSettlementPayment{}
 
 	return claim
+}
+
+//=================================================================================================================================
+//	 AddPayment - Adds a new payment to a claim, assigning the payment an id that is unique for the claim
+//=================================================================================================================================
+func (t *Claim) AddPayment(payment ClaimDetailsSettlementPayment) {
+	payment.Id = strconv.Itoa(len(t.Details.Settlement.Payments) + 1)
+
+	t.Details.Settlement.Payments = append(t.Details.Settlement.Payments, payment)
+}
+
+//=================================================================================================================================
+//	 GetLiableClaim	- Gets the liable claim from the list of linked claims.  (Or the claim in question if it is liable)
+//=================================================================================================================================
+func (t *Claim) GetLiableClaim(stub shim.ChaincodeStubInterface) (Claim, error){
+	if (t.Details.IsLiable) {
+		return *t, nil
+	}
+
+	for _, claimId := range t.Relations.LinkedClaims {
+		linkedClaim, err := RetrieveClaim(stub, claimId)
+		if err != nil { fmt.Printf("Unable to retrieve linked claim: %s", err); return *t, err }
+
+		if (linkedClaim.Details.IsLiable) { return linkedClaim, nil }
+	}
+
+	return *t, errors.New("Unable to obtain liable claim")
 }
 
 //================================================================================================================================================
@@ -182,11 +212,11 @@ func NewGarageReport(Garage string, EstimateStr string,  WriteOffStr string, Not
 	return report, nil
 }
 
-
 //================================================================================================================================================
 //  NewClaimDetailsSettlementPayment: creates a new NewClaimDetailsSettlementPayment
 //================================================================================================================================================
-func NewClaimDetailsSettlementPayment(RecipientType	string, Recipient string, SenderType string, Sender string, Amount int, Status string)(ClaimDetailsSettlementPayment){
+func NewClaimDetailsSettlementPayment(RecipientType string,
+	Recipient string, SenderType string, Sender string, Amount int, Status string)(ClaimDetailsSettlementPayment){
 
 	var payment ClaimDetailsSettlementPayment 
 	

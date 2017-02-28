@@ -737,8 +737,8 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 			return nil, errors.New("Policy doesnt exist");
 		}
 
-		//Add pending payment to claim
-		theClaim, err = t.addPendingPayment(stub, theClaim, policy)
+		//Add pending payments to claim
+		theClaim, err = t.addPendingPaymentsToClaim(stub, theClaim, policy)
 
 		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, policy.Relations.Owner)
 
@@ -760,27 +760,80 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 }
 
 //=========================================================================================
-// This Function marks the claim as paid
+// Adds pending payments to a claim
 //=========================================================================================
-func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface, theClaim Claim, policy Policy) (Claim, error) {
-	fmt.Println("running addPendingPayment()")
+func (t *InsuranceChaincode) addPendingPaymentsToClaim(stub shim.ChaincodeStubInterface, claim Claim, policy Policy) (Claim, error) {
 
-	if theClaim.Details.Status != STATE_SETTLED{
-		fmt.Println("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
-		return theClaim, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
+	if claim.Details.Status != STATE_SETTLED{
+		fmt.Println("addPendingPaymentsToClaim: Unexpected input for this STATE")
+		return claim, errors.New("addPendingPaymentsToClaim: Unexpected input for this STATE")
 	}
 
-	var payment ClaimDetailsSettlementPayment
-	
-	var Amount = theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue - policy.Details.Excess
+	paymentAmount := t.calculatePaymentAmount(claim, policy)
 
-	payment = NewClaimDetailsSettlementPayment(PAYMENT_TYPE_CLAIMANT,
-		policy.Relations.Owner, PAYMENT_TYPE_INSURER, policy.Relations.Insurer, Amount, STATE_NOT_PAID)
+	claim, err := t.addPendingPaymentToClaimant(claim, policy, paymentAmount)
+	if err != nil {fmt.Printf("addPendingPaymentsToClaim: Unable to add claimant payment: %s", err); return claim, err}
 
-	theClaim.Details.Settlement.Payments = make([]ClaimDetailsSettlementPayment, 1)
-	theClaim.Details.Settlement.Payments[0] = payment
+	//If we're not liable, there needs to be a pending payment added from the linked claim insurer to this parties insurer
+	if (claim.Details.Incident.Type == MULTIPLE_PARTIES && !claim.Details.IsLiable) {
+		claim, err = t.addPendingPaymentFromOtherPartyInsurer(stub, claim, policy, paymentAmount)
+		if err != nil { return claim, err }
+	}
+
+	return claim, nil
+}
+
+func (t *InsuranceChaincode) calculatePaymentAmount(claim Claim, policy Policy) (int){
+	excess := policy.Details.Excess
+
+	if (claim.Details.Incident.Type == MULTIPLE_PARTIES) {
+		//If the party is not liable in a multiple party claim, then there should be no excess
+		if (!claim.Details.IsLiable) {
+			excess = 0
+		}
+	}
+
+	return claim.Details.Settlement.TotalLoss.CustomerAgreedValue - excess
+}
+
+//=========================================================================================
+// This Function adds a pending payment from insurer to claimant
+//=========================================================================================
+func (t *InsuranceChaincode) addPendingPaymentToClaimant(theClaim Claim, policy Policy, amount int) (Claim, error) {
+	fmt.Println("running addPendingPaymentToClaimant()")
+
+	payment := NewClaimDetailsSettlementPayment(PAYMENT_TYPE_CLAIMANT,
+		policy.Relations.Owner, PAYMENT_TYPE_INSURER, policy.Relations.Insurer, amount, STATE_NOT_PAID)
+
+	theClaim.AddPayment(payment)
 
 	return theClaim, nil
+}
+
+//=========================================================================================
+// This Function adds a pending payment from insurer to insurer
+//=========================================================================================
+func (t *InsuranceChaincode) addPendingPaymentFromOtherPartyInsurer(stub shim.ChaincodeStubInterface, claim Claim, policy Policy, amount int) (Claim, error) {
+	fmt.Println("running addPendingPaymentFromOtherPartyInsurer()")
+
+	liableClaim, err := claim.GetLiableClaim(stub)
+	if err != nil { return claim, err }
+
+	liablePolicy, err := RetrievePolicy(stub, liableClaim.Relations.RelatedPolicy)
+	if err != nil { return claim, err}
+
+	payment := NewClaimDetailsSettlementPayment(PAYMENT_TYPE_INSURER,
+		policy.Relations.Insurer, PAYMENT_TYPE_INSURER, liablePolicy.Relations.Insurer, amount, STATE_NOT_PAID)
+	claim.AddPayment(payment)
+
+	//Double enter the payment to the liable claim list of payments
+	liableClaim.AddPayment(payment)
+	_, err = SaveClaim(stub, liableClaim)
+	if err != nil { return claim, err }
+
+	//No need to save the other claim as its saved elsewhere
+
+	return claim, nil
 }
 
 //=========================================================================================
