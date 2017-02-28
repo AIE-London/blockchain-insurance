@@ -100,7 +100,7 @@ app.use(logger('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use('/style', express.static(path.join(__dirname, '/views/style')));
-app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/", "/" + apiPath.base + "/oracle*"], auth.middleware));
+app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/", "/" + apiPath.base + "/oracle*", "/crash/notification"], auth.middleware));
 app.use(auth.allowOriginsMiddleware);
 
 
