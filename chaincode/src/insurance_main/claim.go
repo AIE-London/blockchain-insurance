@@ -172,6 +172,44 @@ func (t *Claim) AddPayment(payment ClaimDetailsSettlementPayment) {
 }
 
 //=================================================================================================================================
+//	 UpdatePayment - Updates a payment on a claim
+//=================================================================================================================================
+func (t *Claim) UpdatePayment(payment ClaimDetailsSettlementPayment) (error){
+	paymentIndex := -1
+	for index, aPayment := range t.Details.Settlement.Payments {
+		if aPayment.Id == payment.Id { paymentIndex = index}
+	}
+
+	if paymentIndex == -1 { errors.New("Unable to find payment with id: " + payment.Id) }
+
+	t.Details.Settlement.Payments[paymentIndex] = payment
+
+	return nil
+}
+
+//=================================================================================================================================
+//	 GetPayment - Retrieves the payment with the specified id
+//=================================================================================================================================
+func (t *Claim) GetPayment(paymentId string) (ClaimDetailsSettlementPayment, error){
+	for _, payment := range t.Details.Settlement.Payments {
+		if payment.Id == paymentId { return payment, nil }
+	}
+
+	return ClaimDetailsSettlementPayment{}, errors.New("Unable to find payment with id: " + paymentId)
+}
+
+//=================================================================================================================================
+//	 AreAllPaymentsPaid - Checks if all payments are in a paid status
+//=================================================================================================================================
+func (t *Claim) AreAllPaymentsPaid() (bool){
+	for _, payment := range t.Details.Settlement.Payments {
+		if payment.Status != STATE_PAID { return false }
+	}
+
+	return true
+}
+
+//=================================================================================================================================
 //	 GetLiableClaim	- Gets the liable claim from the list of linked claims.  (Or the claim in question if it is liable)
 //=================================================================================================================================
 func (t *Claim) GetLiableClaim(stub shim.ChaincodeStubInterface) (Claim, error){
