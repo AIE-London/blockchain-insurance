@@ -73,6 +73,8 @@ type ClaimDetailsSettlementPayment struct {
 	Recipient	string		`json:"recipient"`
 	Amount		int			`json:"amount"`
 	Status		string		`json:"status"`
+	SenderType	string		`json:"senderType"`
+	Sender		string		`json:"sender"`
 }
 
 //==============================================================================================================================
@@ -133,9 +135,10 @@ const   NOT_AT_FAULT        =  "not_at_fault"
 //
 //
 //
-const RECIPIENT_TYPE_CLAIMANT   = "claimant"
-const RECIPIENT_TYPE_THIRDPARTY = "third_party"
-const RECIPIENT_TYPE_GARAGE     = "garage"
+const PAYMENT_TYPE_CLAIMANT    = "claimant"
+const PAYMENT_TYPE_THIRDPARTY  = "third_party"
+const PAYMENT_TYPE_GARAGE      = "garage"
+const PAYMENT_TYPE_INSURER     = "insurer"
 
 //=================================================================================================================================
 //	 newClaim	-	Constructs a new claim
@@ -183,12 +186,14 @@ func NewGarageReport(Garage string, EstimateStr string,  WriteOffStr string, Not
 //================================================================================================================================================
 //  NewClaimDetailsSettlementPayment: creates a new NewClaimDetailsSettlementPayment
 //================================================================================================================================================
-func NewClaimDetailsSettlementPayment(RecipientType	string, Recipient string, Amount int,  Status string)(ClaimDetailsSettlementPayment){
+func NewClaimDetailsSettlementPayment(RecipientType	string, Recipient string, SenderType string, Sender string, Amount int, Status string)(ClaimDetailsSettlementPayment){
 
 	var payment ClaimDetailsSettlementPayment 
 	
 	payment.RecipientType = RecipientType
 	payment.Recipient     = Recipient
+	payment.SenderType	  = SenderType
+	payment.Sender        = Sender
 	payment.Amount        = Amount
 	payment.Status        = Status
 
