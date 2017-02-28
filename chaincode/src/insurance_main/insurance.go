@@ -884,7 +884,7 @@ func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface, ca
 }
 
 //=========================================================================================
-// This Function marks the claim as paid
+// Updates the status of any matching payments on linked claims
 //=========================================================================================
 func (t *InsuranceChaincode) updateLinkedPayments(stub shim.ChaincodeStubInterface, claim Claim, payment ClaimDetailsSettlementPayment) (error){
 
