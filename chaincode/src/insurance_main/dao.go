@@ -281,18 +281,28 @@ func getNextId(stub shim.ChaincodeStubInterface, idKey string, idPrefix string) 
 	nextIdNum := strconv.Itoa(currentId + 1)
 
 	save(stub, idKey, []byte(nextIdNum))
+	//Comment below regarding why we need to store this locally
+	stub.PutState(idKey, []byte(nextIdNum))
 
 	return idPrefix + nextIdNum
 }
 
 func getCurrentIdNumber(stub shim.ChaincodeStubInterface, idKey string) (int) {
-	bytes, err := retrieve(stub, idKey)
+	bytesFromCrud, err := retrieve(stub, idKey)
 
 	if err != nil { fmt.Printf("getCurrentIdNumber Error getting id %s", err); return -1}
 
-	currentId, err := strconv.Atoi(string(bytes))
+	currentIdFromCrud, _ := strconv.Atoi(string(bytesFromCrud))
 
-	return currentId;
+	//There seems to be a bug in hyperledger where the state within a transaction is not correct within a different chaincode
+	//when invoking that chaincode multiple times within the same transaction, so we need to keep track of the id state locally
+	bytesFromLocal, _ := stub.GetState(idKey)
+	currentIdLocal, _ := strconv.Atoi(string(bytesFromLocal))
+
+	//Check which is higher and use that
+	if (currentIdLocal > currentIdFromCrud) { return currentIdLocal }
+
+	return currentIdFromCrud
 }
 
 func configureIdState(stub shim.ChaincodeStubInterface) {
@@ -303,6 +313,12 @@ func configureIdState(stub shim.ChaincodeStubInterface) {
 		save(stub, CURRENT_CLAIM_ID_KEY, []byte("0"))
 		save(stub, CURRENT_USER_ID_KEY, []byte("2"))
 	}
+
+	//There seems to be a bug in hyperledger where the state within a transaction is not correct within a different chaincode
+	//when invoking that chaincode multiple times within the same transaction, so we need to keep track of the id state locally
+	stub.PutState(CURRENT_POLICY_ID_KEY, []byte("2"))
+	stub.PutState(CURRENT_CLAIM_ID_KEY, []byte("0"))
+	stub.PutState(CURRENT_USER_ID_KEY, []byte("2"))
 }
 
 func configureApprovedGaragesState(stub shim.ChaincodeStubInterface) {

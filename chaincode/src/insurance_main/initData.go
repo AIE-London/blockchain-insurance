@@ -5,9 +5,9 @@ import (
 )
 
 func InitReferenceData(stub shim.ChaincodeStubInterface) (error) {
-	_, err := SavePolicy(stub, NewPolicy("P1", "claimant1", "31/01/17", "30/01/18", 300, "BP08BRV"))
+	_, err := SavePolicy(stub, NewPolicy("P1", "claimant1", "insurer1", "31/01/17", "30/01/18", 300, "BP08BRV"))
 	if err != nil{ return err }
-	_, err = SavePolicy(stub, NewPolicy("P2", "claimant2", "11/01/17", "10/01/18", 250, "DZ14TYV"))
+	_, err = SavePolicy(stub, NewPolicy("P2", "claimant2", "insurer2", "11/01/17", "10/01/18", 250, "DZ14TYV"))
 	if err != nil{ return err }
 
 	_, err = SaveVehicle(stub, NewVehicle("BP08BRV", "Ford", "Focus", "2008", 55000, "100924404"))

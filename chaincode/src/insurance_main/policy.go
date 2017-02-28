@@ -27,6 +27,7 @@ type PolicyDetails struct {
 //==============================================================================================================================
 type PolicyRelations struct {
 	Owner		string			`json:"owner"`
+	Insurer		string			`json:"insurer"`
 	Vehicle		string			`json:"vehicle"`
 	Claims		[]string		`json:"claims"`
 
@@ -35,7 +36,7 @@ type PolicyRelations struct {
 //=================================================================================================================================
 //	 newPolicy	-	Constructs a new policy
 //=================================================================================================================================
-func NewPolicy(id string, owner string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
+func NewPolicy(id string, owner string, insurer string, startDate string, endDate string, excess int, vehicleReg string) (Policy) {
 	var policy Policy
 
 	policy.Type = "policy"
@@ -46,6 +47,7 @@ func NewPolicy(id string, owner string, startDate string, endDate string, excess
 	policy.Details.Excess = excess
 
 	policy.Relations.Owner = owner
+	policy.Relations.Insurer = insurer
 	policy.Relations.Vehicle = vehicleReg
 
 	return policy

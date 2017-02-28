@@ -26,6 +26,7 @@ type ClaimDetails struct {
 	Report		ClaimDetailsClaimGarageReport	`json:"report"`
 	Repair		RepairWorkOrder             	`json:"repair"`
 	Settlement	ClaimDetailsSettlement			`json:"settlement"`
+	IsLiable	bool							`json:"liable"`
 }
 
 //==============================================================================================================================
@@ -78,7 +79,9 @@ type ClaimDetailsSettlementPayment struct {
 //	ClaimRelations - Defines the structure for a ClaimRelations object.
 //==============================================================================================================================
 type ClaimRelations struct {
-	RelatedPolicy	string	`json:"relatedPolicy"`
+	RelatedPolicy	string		`json:"relatedPolicy"`
+	OtherPartyReg	string		`json:"otherPartyRegistration"`
+	LinkedClaims	[]string	`json:"linkedClaims"`
 }
 
 //=============================================================================================================================
@@ -97,9 +100,10 @@ type RepairWorkOrder struct {
 }
 
 //==============================================================================================================================
-//	 Claim Status types - TODO Flesh these out. TODO Following IBM sample, but should/could these be enums?
+//	 Claim Status types
 //==============================================================================================================================
 const   STATE_AWAITING_POLICE_REPORT                = "awaiting_police_report"
+const	STATE_AWAITING_LIABILITY_ACCEPTANCE			= "awaiting_liability_acceptance"
 const   STATE_AWAITING_GARAGE_REPORT                = "awaiting_garage_report"
 const   STATE_PENDING_AFTER_REPORT_DECISION         = "pending_decision"
 const   STATE_TOTAL_LOSS_ESTABLISHED                = "total_loss_established"
@@ -144,11 +148,10 @@ func NewClaim(id string, relatedPolicy string, description string, incidentDate 
 	claim.Type = "claim"
 
 	claim.Relations.RelatedPolicy = relatedPolicy
+	claim.Relations.LinkedClaims = []string{}
 	claim.Details.Description = description
 	claim.Details.Incident.Date = incidentDate
 	claim.Details.Incident.Type = incidentType
-
-	claim.Details.Status = STATE_AWAITING_GARAGE_REPORT
 
 	return claim
 }
