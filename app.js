@@ -403,9 +403,10 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
     console.log("-- policies form super user --");
     console.log(policies);
 
-    policyForReg = policies.results.filter(function (item) {
+    policyForReg = JSON.parse(policies.results).filter(function (item) {
       return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
     })[0];
+
 
     responseBody.policy = policyForReg;
     responseBody.message = "Success";
