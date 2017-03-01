@@ -400,6 +400,9 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
 
   policyService.getFullHistory("superuser", function(policies){
 
+    console.log("-- policies form super user --");
+    console.log(policies);
+
     policyForReg = policies.results.filter(function (item) {
       return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
     })[0];
