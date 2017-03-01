@@ -404,15 +404,7 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
       return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
     })[0];
 
-    console.log("--- PolicyForReg ---");
-    console.log(policyForReg);
-
     userService.getUserPushTokens(policyForReg.relations.owner, function(results){
-
-      console.log("-- Results ---");
-      console.log(results);
-
-      results = JSON.parse(results);
 
       if (results instanceof Array){
         // We all good

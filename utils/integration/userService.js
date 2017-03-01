@@ -27,7 +27,7 @@ var getUserPushTokens = function(username, callback){
     method: "GET"
   }, function(error, response, body){
     if (response.statusCode == 200){
-      callback(body);
+      callback(JSON.parse(body));
     } else {
       callback(response.statusCode);
     }
