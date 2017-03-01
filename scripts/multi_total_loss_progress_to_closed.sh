@@ -8,6 +8,8 @@ curl -H "Content-Type: application/json" -X POST -d '{"enrollId": "claimant2","e
 sleep 1
 curl -H "Content-Type: application/json" -X POST -d '{"enrollId": "insurer1","enrollSecret": "123456789123"}' http://localhost:7050/registrar
 sleep 1
+curl -H "Content-Type: application/json" -X POST -d '{"enrollId": "insurer2","enrollSecret": "123456789123"}' http://localhost:7050/registrar
+sleep 1
 
 
 printf "\n*** Deploying CRUD chaincode ***\n"
@@ -216,6 +218,119 @@ curl -H "Content-Type: application/json" -X POST -d '{
              ]
          },
          "secureContext": "claimant1",
+				 "attributes": ["username","role"]
+     },
+     "id": 3
+ }' http://localhost:7050/chaincode
+sleep 3
+
+printf "\n*** Confirming Paid C1 - 1 ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "invoke",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "confirmPaidOut",
+             "args": [
+                 "C1",
+                 "1"
+             ]
+         },
+         "secureContext": "insurer1",
+				 "attributes": ["username","role"]
+     },
+     "id": 3
+ }' http://localhost:7050/chaincode
+sleep 3
+
+printf "\n*** Confirming Paid C2 - 1 ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "invoke",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "confirmPaidOut",
+             "args": [
+                 "C2",
+                 "1"
+             ]
+         },
+         "secureContext": "insurer2",
+				 "attributes": ["username","role"]
+     },
+     "id": 3
+ }' http://localhost:7050/chaincode
+sleep 3
+
+printf "\n*** Confirming Paid C2 - 2 ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "invoke",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "confirmPaidOut",
+             "args": [
+                 "C2",
+                 "2"
+             ]
+         },
+         "secureContext": "insurer2",
+				 "attributes": ["username","role"]
+     },
+     "id": 3
+ }' http://localhost:7050/chaincode
+sleep 3
+
+printf "\n*** Close Claim C1 ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "invoke",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "closeClaim",
+             "args": [
+                 "C1"
+             ]
+         },
+         "secureContext": "insurer1",
+				 "attributes": ["username","role"]
+     },
+     "id": 3
+ }' http://localhost:7050/chaincode
+sleep 3
+
+printf "\n*** Close Claim C2 ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+     "jsonrpc": "2.0",
+     "method": "invoke",
+     "params": {
+         "type": 1,
+         "chaincodeID": {
+             "name": "insurance"
+         },
+         "ctorMsg": {
+             "function": "closeClaim",
+             "args": [
+                 "C2"
+             ]
+         },
+         "secureContext": "insurer2",
 				 "attributes": ["username","role"]
      },
      "id": 3

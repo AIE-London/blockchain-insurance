@@ -4,6 +4,7 @@ var config =  require('config');
 var cloudantIntegration = require('./utils/integration/cloudantIntegration');
 
 var userService = require('./utils/integration/userService');
+var pushNotificationService = require('./utils/integration/pushNotification');
 
 var auth = require('./utils/integration/authService');
 
@@ -393,17 +394,73 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
  */
 app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationSchema}), auth.checkAuthorized, function(request, response){
 
-  // TODO: Get policies and match to registration so we can push notify correct user. Templated out for now to prove connectivity and schema validation
   var responseBody = {};
 
-  responseBody.message = "Success";
-  responseBody.data = request.body;
-  response.statusCode = 200;
-  response.setHeader('Content-Type', 'application/json');
-  response.write(JSON.stringify(responseBody));
-  response.end();
-  return;
+  var policyForReg = {};
 
+  policyService.getFullHistory("superuser", function(policies){
+
+    policyForReg = JSON.parse(policies.results).filter(function (item) {
+      return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
+    })[0];
+
+    userService.getUserPushTokens(policyForReg.relations.owner, function(results){
+
+      // Instance of array indicating success!
+      if (results instanceof Array){
+
+        var date = new Date(Date.parse(request.body.crashReport.timeStamp));  // Turn into Date
+
+        var month = date.getMonth()+1;
+        var day = date.getDate();
+
+        if (month < 10){
+          month = "0" + month + "";
+        }
+        if (day < 10){
+          day = "0" + day + "";
+        }
+
+        var formattedDate = date.getFullYear() + "-" + month + "-" + day;
+
+        // Generate a claim using crash report and policy
+        var claimBody = {
+          relatedPolicy: policyForReg.id,
+          description: "Raised Automatically From Crash Detection",
+          incidentDate: formattedDate,
+          type: "single_party" // Hard coded to single party for PoC - Flow 1
+        };
+
+        claimService.raiseClaim(claimBody, policyForReg.relations.owner, function(res){
+          if (res.error){
+            responseBody.error = res.error;
+            response.statusCode = 500;
+          } else if (res.results){
+            results.forEach(function(pushToken){
+              var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
+              pushNotificationService.send(pushToken, "Hope you're ok!", body)
+            });
+            responseBody.results = res.results;
+            response.statusCode = 200;
+          } else {
+            responseBody.error = "unknown issue";
+            response.statusCode = 500;
+          }
+          response.setHeader('Content-Type', 'application/json');
+          response.write(JSON.stringify(responseBody));
+          response.end();
+          return;
+        });
+      } else {
+        responseBody.message = "No user to push notifications to!";
+        response.statusCode = 404;
+        response.setHeader('Content-Type', 'application/json');
+        response.write(JSON.stringify(responseBody));
+        response.end();
+        return;
+      }
+    });
+  });
 });
 
 /**

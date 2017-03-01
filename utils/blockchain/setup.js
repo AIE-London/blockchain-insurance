@@ -48,7 +48,7 @@ var configureNetworkChain = function(){
 
   // Set Chain
   chain = hfc.newChain('insurance-setup');
-  chain.setDevMode(false);
+  chain.setDevMode(config.blockchain.devMode);
 
   // Set the URL for membership services
   chain.setMemberServicesUrl("grpc://" + MEMBERSRVC_ADDRESS);

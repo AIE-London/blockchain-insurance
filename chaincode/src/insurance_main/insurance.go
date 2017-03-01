@@ -375,8 +375,13 @@ func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInte
 	//Super user can see everything
 	if caller_affiliation == ROLE_SUPER_USER { return true }
 
-	//Should associate policy with insurer but for now, allow it
-	if caller_affiliation == ROLE_INSURER { return true }
+	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
+	if err != nil {fmt.Printf("Invalid policy, claim is not relevant"); return false}
+
+	if caller_affiliation == ROLE_INSURER {
+		//Check policy is associated with the insurer
+		if policy.Relations.Insurer == caller {fmt.Printf("Policy insurer and caller match, claim is relevant"); return true}
+	}
 
 	//Garage checks
 	if caller_affiliation == ROLE_GARAGE {
@@ -395,9 +400,6 @@ func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInte
 	}
 
 	//Is claim policy owned by caller?
-	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
-	if err != nil {fmt.Printf("Invalid policy, claim is not relevant"); return false}
-
 	if caller == policy.Relations.Owner {fmt.Printf("Policy owner and caller match, claim is relevant"); return true}
 
 	fmt.Printf("Policy owner and caller don't match, claim is not relevant")
@@ -737,8 +739,8 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 			return nil, errors.New("Policy doesnt exist");
 		}
 
-		//Add pending payment to claim
-		theClaim, err = t.addPendingPayment(stub, theClaim, policy)
+		//Add pending payments to claim
+		theClaim, err = t.addPendingPaymentsToClaim(stub, theClaim, policy)
 
 		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, policy.Relations.Owner)
 
@@ -760,27 +762,80 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 }
 
 //=========================================================================================
-// This Function marks the claim as paid
+// Adds pending payments to a claim
 //=========================================================================================
-func (t *InsuranceChaincode) addPendingPayment(stub shim.ChaincodeStubInterface, theClaim Claim, policy Policy) (Claim, error) {
-	fmt.Println("running addPendingPayment()")
+func (t *InsuranceChaincode) addPendingPaymentsToClaim(stub shim.ChaincodeStubInterface, claim Claim, policy Policy) (Claim, error) {
 
-	if theClaim.Details.Status != STATE_SETTLED{
-		fmt.Println("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
-		return theClaim, errors.New("APPROVE_PAYMENT_OUT: Unexpected input for this STATE")
+	if claim.Details.Status != STATE_SETTLED{
+		fmt.Println("addPendingPaymentsToClaim: Unexpected input for this STATE")
+		return claim, errors.New("addPendingPaymentsToClaim: Unexpected input for this STATE")
 	}
 
-	var payment ClaimDetailsSettlementPayment
-	
-	var Amount = theClaim.Details.Settlement.TotalLoss.CustomerAgreedValue - policy.Details.Excess
+	paymentAmount := t.calculatePaymentAmount(claim, policy)
 
-	payment = NewClaimDetailsSettlementPayment(PAYMENT_TYPE_CLAIMANT,
-		policy.Relations.Owner, PAYMENT_TYPE_INSURER, policy.Relations.Insurer, Amount, STATE_NOT_PAID)
+	claim, err := t.addPendingPaymentToClaimant(claim, policy, paymentAmount)
+	if err != nil {fmt.Printf("addPendingPaymentsToClaim: Unable to add claimant payment: %s", err); return claim, err}
 
-	theClaim.Details.Settlement.Payments = make([]ClaimDetailsSettlementPayment, 1)
-	theClaim.Details.Settlement.Payments[0] = payment
+	//If we're not liable, there needs to be a pending payment added from the linked claim insurer to this parties insurer
+	if (claim.Details.Incident.Type == MULTIPLE_PARTIES && !claim.Details.IsLiable) {
+		claim, err = t.addPendingPaymentFromOtherPartyInsurer(stub, claim, policy, paymentAmount)
+		if err != nil { return claim, err }
+	}
+
+	return claim, nil
+}
+
+func (t *InsuranceChaincode) calculatePaymentAmount(claim Claim, policy Policy) (int){
+	excess := policy.Details.Excess
+
+	if (claim.Details.Incident.Type == MULTIPLE_PARTIES) {
+		//If the party is not liable in a multiple party claim, then there should be no excess
+		if (!claim.Details.IsLiable) {
+			excess = 0
+		}
+	}
+
+	return claim.Details.Settlement.TotalLoss.CustomerAgreedValue - excess
+}
+
+//=========================================================================================
+// This Function adds a pending payment from insurer to claimant
+//=========================================================================================
+func (t *InsuranceChaincode) addPendingPaymentToClaimant(theClaim Claim, policy Policy, amount int) (Claim, error) {
+	fmt.Println("running addPendingPaymentToClaimant()")
+
+	payment := NewClaimDetailsSettlementPayment(PAYMENT_TYPE_CLAIMANT,
+		policy.Relations.Owner, PAYMENT_TYPE_INSURER, policy.Relations.Insurer, amount, STATE_NOT_PAID)
+
+	theClaim.AddPayment(payment)
 
 	return theClaim, nil
+}
+
+//=========================================================================================
+// This Function adds a pending payment from insurer to insurer
+//=========================================================================================
+func (t *InsuranceChaincode) addPendingPaymentFromOtherPartyInsurer(stub shim.ChaincodeStubInterface, claim Claim, policy Policy, amount int) (Claim, error) {
+	fmt.Println("running addPendingPaymentFromOtherPartyInsurer()")
+
+	liableClaim, err := claim.GetLiableClaim(stub)
+	if err != nil { return claim, err }
+
+	liablePolicy, err := RetrievePolicy(stub, liableClaim.Relations.RelatedPolicy)
+	if err != nil { return claim, err}
+
+	payment := NewClaimDetailsSettlementPayment(PAYMENT_TYPE_INSURER,
+		policy.Relations.Insurer, PAYMENT_TYPE_INSURER, liablePolicy.Relations.Insurer, amount, STATE_NOT_PAID)
+	claim.AddPayment(payment)
+
+	//Double enter the payment to the liable claim list of payments
+	liableClaim.AddPayment(payment)
+	_, err = SaveClaim(stub, liableClaim)
+	if err != nil { return claim, err }
+
+	//No need to save the other claim as its saved elsewhere
+
+	return claim, nil
 }
 
 //=========================================================================================
@@ -795,9 +850,9 @@ func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface, ca
 		return nil, errors.New("\nconfirmPaidOut: Caller is not an insurer")
 	}
 
-	if len(args) != 1 {
-		fmt.Println("CONFIRM_PAID_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
-		return nil, errors.New("CONFIRM_PAID_OUT: Incorrect number of arguments. Expecting 1 (claimId)")
+	if len(args) != 2 {
+		fmt.Println("CONFIRM_PAID_OUT: Incorrect number of arguments. Expecting 2 (claimId, paymentId)")
+		return nil, errors.New("CONFIRM_PAID_OUT: Incorrect number of arguments. Expecting 2 (claimId, paymentId)")
 	}
 
 	theClaim, err := RetrieveClaim(stub , args[0])
@@ -808,12 +863,57 @@ func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface, ca
 		fmt.Println("CONFIRM_PAID_OUT: Unexpected input for this STATE")
 		return nil, errors.New("CONFIRM_PAID_OUT: Unexpected input for this STATE")
 	}
-	
-	// Assumption: there should be only one payment
-	theClaim.Details.Settlement.Payments[0].Status = STATE_PAID
+
+	payment, err := theClaim.GetPayment(args[1])
+
+	//Check that the caller is the sender
+	if (payment.Sender != caller){
+		fmt.Println("CONFIRM_PAID_OUT: Caller is not the sender of the payment")
+		return nil, errors.New("CONFIRM_PAID_OUT: Caller is not the sender of the payment")
+	}
+
+	if err != nil { return nil, err}
+
+	payment.Status = STATE_PAID
+	theClaim.UpdatePayment(payment)
+
 	_, err = SaveClaim(stub, theClaim)
+
+	err = t.updateLinkedPayments(stub, theClaim, payment)
+	if err != nil { fmt.Printf("Unable to update linked payments: %s", err) }
 	
 	return nil, err
+}
+
+//=========================================================================================
+// Updates the status of any matching payments on linked claims
+//=========================================================================================
+func (t *InsuranceChaincode) updateLinkedPayments(stub shim.ChaincodeStubInterface, claim Claim, payment ClaimDetailsSettlementPayment) (error){
+
+	fmt.Println("running updateLinkedPayments()")
+
+	//If this is a payment to an insurer then update the payment on the linked claim
+	if (payment.RecipientType == PAYMENT_TYPE_INSURER) {
+		for _, claimId := range claim.Relations.LinkedClaims {
+			linkedClaim, err := RetrieveClaim(stub, claimId)
+			if err != nil{ return err }
+
+			//Check if there is a payment with the same parameters TODO: Hacky. There should be a proper link I think
+			for _, linkedPayment := range linkedClaim.Details.Settlement.Payments {
+				if linkedPayment.Sender == payment.Sender &&
+						linkedPayment.Recipient == payment.Recipient &&
+						linkedPayment.Amount == payment.Amount {
+					//We've found a matching payment...update
+					linkedPayment.Status = STATE_PAID
+					linkedClaim.UpdatePayment(linkedPayment)
+					_, err = SaveClaim(stub, linkedClaim)
+					if err != nil { return err }
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 //===============================================================================
@@ -872,7 +972,7 @@ func (t *InsuranceChaincode) closeClaim(stub shim.ChaincodeStubInterface,  calle
 //============================================================================================================
 func (t *InsuranceChaincode) closeTotalLossClaim(stub shim.ChaincodeStubInterface,  theClaim Claim) ([]byte, error){
 
-	if !t.isAllPaidout(theClaim){
+	if !theClaim.AreAllPaymentsPaid() {
 		fmt.Println("CLOSE_CLAIM: Error: open payment out. Total_Loss Claim can not be closed with open payment out")
 		return nil, errors.New("CLOSE_CLAIM: Error: open payment out. Total_Loss Claim can not be closed with open payment out")
 	}
@@ -881,21 +981,6 @@ func (t *InsuranceChaincode) closeTotalLossClaim(stub shim.ChaincodeStubInterfac
 	SaveClaim(stub, theClaim)
 
 	return nil, nil
-}
-
-//===========================================================================================================
-//  This function checks whether all the payment out are sent
-//===========================================================================================================
-func (t *InsuranceChaincode) isAllPaidout(theClaim Claim) bool {
-
-	if theClaim.Details.Settlement.Payments != nil{
-		// Assumption: there should be only one payment out
-		if STATE_PAID == theClaim.Details.Settlement.Payments[0].Status{
-			return true;
-		}
-	}
-
-	return false
 }
 
 func (t *InsuranceChaincode) isVehicleValidForClaim(stub shim.ChaincodeStubInterface,  theClaim Claim, vehicleReg string)(bool){
