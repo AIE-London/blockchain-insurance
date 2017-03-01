@@ -406,15 +406,56 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
 
     userService.getUserPushTokens(policyForReg.relations.owner, function(results){
 
+      // Instance of array indicating success!
       if (results instanceof Array){
-        // We all good
-        results.forEach(function(pushToken){
-          var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
-          pushNotificationService.send(pushToken, "Hope you're ok!", body)
+
+        var date = Date.parse(request.body.crashReport.timeStamp) // Turn into Date
+
+        var month = date.getMonth()+1;
+        var day = date.getDate();
+
+        if (month < 10){
+          month = "0" + month + "";
+        }
+        if (day < 10){
+          day = "0" + day + "";
+        }
+
+        var formattedDate = date.getFullYear() + "-" + month + "-" + day;
+
+        // Generate a claim using crash report and policy
+        var claimBody = {
+          relatedPolicy: policyForReg.id,
+          description: "Raised Automatically From Crash Detection",
+          incidentDate: formattedDate,
+          type: "single_party" // Hard coded to single party for PoC - Flow 1
+        };
+
+        claimService.raiseClaim(claimBody, policyForReg.relations.owner, function(res){
+          if (res.error){
+            responseBody.error = res.error;
+            response.statusCode = 500;
+          } else if (res.results){
+            results.forEach(function(pushToken){
+              var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
+              pushNotificationService.send(pushToken, "Hope you're ok!", body)
+            });
+            responseBody.results = res.results;
+            response.statusCode = 200;
+          } else {
+            responseBody.error = "unknown issue";
+            response.statusCode = 500;
+          }
+          response.setHeader('Content-Type', 'application/json');
+          response.write(JSON.stringify(responseBody));
+          response.end();return;
+
         });
+
         responseBody.policy = policyForReg;
         responseBody.message = "Success";
         response.statusCode = 200;
+
       } else {
         responseBody.message = "No user to push notifications to!";
         response.statusCode = 404;
