@@ -19,7 +19,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["Single Party", "Liability"]
+      "enum": ["Single Party", "Multiple Party"]
     },
     "multiParty":{
       "type": "object",
