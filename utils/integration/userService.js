@@ -20,6 +20,22 @@ var authenticate = function(body, callback){
   })
 };
 
+///user/{id}/push
+var getUserPushTokens = function(username, callback){
+  request({
+    url: userEndpoint + "/user/" + username + "/push",
+    method: "GET"
+  }, function(error, response, body){
+    if (response.statusCode == 200){
+      callback(body);
+    } else {
+      callback(response.statusCode);
+    }
+  })
+};
+
+
 module.exports = {
-  authenticate: authenticate
+  authenticate: authenticate,
+  getUserPushTokens: getUserPushTokens
 };
