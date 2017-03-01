@@ -396,14 +396,24 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
   // TODO: Get policies and match to registration so we can push notify correct user. Templated out for now to prove connectivity and schema validation
   var responseBody = {};
 
-  responseBody.message = "Success";
-  responseBody.data = request.body;
-  response.statusCode = 200;
-  response.setHeader('Content-Type', 'application/json');
-  response.write(JSON.stringify(responseBody));
-  response.end();
-  return;
+  var policyForReg = {};
 
+  policyService.getFullHistory("superuser", function(policies){
+
+    policyForReg = policies.results.filter(function (item) {
+      return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
+    })[0];
+
+    responseBody.policy = policyForReg;
+    responseBody.message = "Success";
+    responseBody.data = request.body;
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
 });
 
 /**
