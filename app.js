@@ -409,7 +409,7 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
       // Instance of array indicating success!
       if (results instanceof Array){
 
-        var date = Date.parse(request.body.crashReport.timeStamp) // Turn into Date
+        var date = new Date(Date.parse(request.body.crashReport.timeStamp));  // Turn into Date
 
         var month = date.getMonth()+1;
         var day = date.getDate();
