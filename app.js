@@ -412,7 +412,7 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
       console.log("-- Results ---");
       console.log(results);
 
-      if (results instanceof Array){
+      if (results && results[0]){
         // We all good
         results.forEach(function(pushToken){
           var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
