@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "AIE JSON",
+  "description": "AIE JSON",
+  "type": "object",
+  "properties": {
+    "crashReport": {
+      "type": "object",
+      "properties": {
+        "timeStamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reg": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 15
+        }
+      },
+      "required": [
+        "timeStamp",
+        "reg"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "crashReport"
+  ],
+  "additionalProperties": false
+}

@@ -4,6 +4,7 @@ var config =  require('config');
 var cloudantIntegration = require('./utils/integration/cloudantIntegration');
 
 var userService = require('./utils/integration/userService');
+var pushNotificationService = require('./utils/integration/pushNotification');
 
 var auth = require('./utils/integration/authService');
 
@@ -47,6 +48,7 @@ schemas.authSchema = require("./config/schemas/authSchema.json");
 schemas.postClaimSchema = require("./config/schemas/postClaimSchema.json");
 schemas.postGarageReportSchemas = require('./config/schemas/postGarageReportSchema.json');
 schemas.postPayoutAgreementSchema = require('./config/schemas/postPayoutAgreementSchema.json');
+schemas.postCrashNotificationSchema = require('./config/schemas/postCrashNotificationSchema.json');
 
 /**
  * Swagger Configuration
@@ -72,6 +74,7 @@ swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.de
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postClaimSchema.json"), "postClaimSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postGarageReportSchema.json"), "postGarageReportSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postPayoutAgreementSchema.json"), "postPayoutAgreementSchema");
+swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postCrashNotificationSchema.json"), "postCrashNotificationSchema");
 
 /**
  * Environment Configuration
@@ -98,7 +101,7 @@ app.use(logger('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use('/style', express.static(path.join(__dirname, '/views/style')));
-app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/", "/" + apiPath.base + "/oracle*"], auth.middleware));
+app.use(routingHelperFunctions.unlessRoute(["/auth", "/swagger.json","/socket.io/", "/" + apiPath.base + "/oracle*", "/crash/notification"], auth.middleware));
 app.use(auth.allowOriginsMiddleware);
 
 
@@ -366,6 +369,61 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
     response.end();
     return;
 
+  });
+});
+
+/**
+ * @swagger
+ * /crash/notification:
+ *   post:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: Endpoint for submitting crash notification
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: post-crash-notification-schema
+ *         description: crash notification content
+ *         in: body
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/postCrashNotificationSchema'
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationSchema}), auth.checkAuthorized, function(request, response){
+
+  var responseBody = {};
+
+  var policyForReg = {};
+
+  policyService.getFullHistory("superuser", function(policies){
+
+    policyForReg = JSON.parse(policies.results).filter(function (item) {
+      return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
+    })[0];
+
+    userService.getUserPushTokens(policyForReg.relations.owner, function(results){
+
+      if (results instanceof Array){
+        // We all good
+        results.forEach(function(pushToken){
+          var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
+          pushNotificationService.send(pushToken, "Hope you're ok!", body)
+        });
+        responseBody.policy = policyForReg;
+        responseBody.message = "Success";
+        response.statusCode = 200;
+      } else {
+        responseBody.message = "No user to push notifications to!";
+        response.statusCode = 404;
+      }
+      response.setHeader('Content-Type', 'application/json');
+      response.write(JSON.stringify(responseBody));
+      response.end();
+      return;
+    });
   });
 });
 
