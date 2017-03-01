@@ -375,8 +375,13 @@ func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInte
 	//Super user can see everything
 	if caller_affiliation == ROLE_SUPER_USER { return true }
 
-	//Should associate policy with insurer but for now, allow it
-	if caller_affiliation == ROLE_INSURER { return true }
+	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
+	if err != nil {fmt.Printf("Invalid policy, claim is not relevant"); return false}
+
+	if caller_affiliation == ROLE_INSURER {
+		//Check policy is associated with the insurer
+		if policy.Relations.Insurer == caller {fmt.Printf("Policy insurer and caller match, claim is relevant"); return true}
+	}
 
 	//Garage checks
 	if caller_affiliation == ROLE_GARAGE {
@@ -395,9 +400,6 @@ func (t *InsuranceChaincode) isClaimRelevantToCaller(stub shim.ChaincodeStubInte
 	}
 
 	//Is claim policy owned by caller?
-	policy, err := RetrievePolicy(stub, claim.Relations.RelatedPolicy)
-	if err != nil {fmt.Printf("Invalid policy, claim is not relevant"); return false}
-
 	if caller == policy.Relations.Owner {fmt.Printf("Policy owner and caller match, claim is relevant"); return true}
 
 	fmt.Printf("Policy owner and caller don't match, claim is not relevant")

@@ -3,23 +3,58 @@ var emailService = require('../integration/emailService');
 var config = require('config');
 
 //Payments would be made off chain and then call back into the chain to confirm payment
-var payoutClaim = function(claimId, policyId, policyOwner, invokerUsername) {
+var payoutClaim = function(claimId, policyId, policyOwner) {
   console.log("'Paying out' claim with id: " + claimId);
   
   //Actual payment logic would start here in a production system
   
   //Payment made
 
-  //Set claim as paid in the blockchain
-  claimService.confirmPaidOut(claimId, invokerUsername, function(result) {
-    if (result.error) {
-      console.error("There was a problem when marking the claim as paid in the blockchain: " + result.error);
-    } else {
-      console.log("confirmPaidOut invoked for claimId: " + claimId);
+  //Iterate through all insurers and mark as paid if the claim is associated with the insurer
+  usersConfig = config.blockchain.users;
+  for (var i = 0; i < usersConfig.length; i++) {
+    var user = usersConfig[i];
+    var role = getRoleForUser(user);
 
-      sendEmail(claimId, policyId, policyOwner);
+    if (role == "insurer") {
+      confirmPaidOutForInsurer(claimId, policyId, policyOwner, user.enrollmentId);
     }
-  });
+  }
+}
+
+var getRoleForUser = function(user) {
+  for (var i = 0; i < user.attributes.length; i++) {
+    var attribute = user.attributes[i];
+
+    if (attribute.name == "role") {
+      return attribute.value;
+    }
+  }
+}
+
+var confirmPaidOutForInsurer = function(claimId, policyId, policyOwner, insurerUsername) {
+
+  claimService.getClaimWithId(claimId, insurerUsername, function(claim) {
+    if (claim) {
+      for (var i = 0; i < claim.details.settlement.payments.length; i++) {
+        var payment = claim.details.settlement.payments[i]
+        if (payment.sender = insurerUsername) {
+          claimService.confirmPaidOut(claimId, payment.id, insurerUsername, function (result) {
+            if (result.error) {
+              console.error("There was a problem when marking the claim as paid in the blockchain: " + result.error);
+            } else {
+              console.log("confirmPaidOut invoked for claimId: " + claimId);
+              if (payment.recipientType == "claimant") {
+                sendEmail(claimId, policyId, policyOwner);
+              }
+            }
+          });
+        }
+      }
+    } else {
+      console.log("Cannot get claim with id: " + claimId + " for insurer: " + insurerUsername + ". This may be expected");
+    }
+  })
 }
 
 var sendEmail = function(claimId, policyId, policyOwner) {
