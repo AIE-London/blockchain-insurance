@@ -404,10 +404,17 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
       return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
     })[0];
 
-    userService.getUserPushTokens(policyForReg.relations.owner, function(response){
-      if (response instanceof Array){
+    console.log("--- PolicyForReg ---");
+    console.log(policyForReg);
+
+    userService.getUserPushTokens(policyForReg.relations.owner, function(results){
+
+      console.log("-- Results ---");
+      console.log(results);
+
+      if (results instanceof Array){
         // We all good
-        response.forEach(function(pushToken){
+        results.forEach(function(pushToken){
           var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
           pushNotificationService.send(pushToken, "")
         });
