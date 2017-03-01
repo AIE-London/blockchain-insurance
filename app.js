@@ -393,17 +393,28 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
  */
 app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationSchema}), auth.checkAuthorized, function(request, response){
 
-  // TODO: Get policies and match to registration so we can push notify correct user. Templated out for now to prove connectivity and schema validation
+  // TODO: Push Notify!
+
   var responseBody = {};
 
-  responseBody.message = "Success";
-  responseBody.data = request.body;
-  response.statusCode = 200;
-  response.setHeader('Content-Type', 'application/json');
-  response.write(JSON.stringify(responseBody));
-  response.end();
-  return;
+  var policyForReg = {};
 
+  policyService.getFullHistory("superuser", function(policies){
+
+    policyForReg = JSON.parse(policies.results).filter(function (item) {
+      return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
+    })[0];
+
+    responseBody.policy = policyForReg;
+    responseBody.message = "Success";
+    responseBody.data = request.body;
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
 });
 
 /**
