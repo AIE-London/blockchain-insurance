@@ -38,7 +38,7 @@ var confirmPaidOutForInsurer = function(claimId, policyId, policyOwner, insurerU
     if (claim) {
       for (var i = 0; i < claim.details.settlement.payments.length; i++) {
         var payment = claim.details.settlement.payments[i]
-        if (payment.sender = insurerUsername) {
+        if (payment.sender.toLowerCase() == insurerUsername.toLowerCase()) {
           claimService.confirmPaidOut(claimId, payment.id, insurerUsername, function (result) {
             if (result.error) {
               console.error("There was a problem when marking the claim as paid in the blockchain: " + result.error);
