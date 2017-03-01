@@ -2,7 +2,7 @@
  * Created by dcotton on 20/02/2017.
  */
 
-var req = 'then-request';
+var req = require("then-request");
 
 const _gcmToken = require('../../config/credentials/gcm').gcm;
 

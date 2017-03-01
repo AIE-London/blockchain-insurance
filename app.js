@@ -4,6 +4,7 @@ var config =  require('config');
 var cloudantIntegration = require('./utils/integration/cloudantIntegration');
 
 var userService = require('./utils/integration/userService');
+var pushNotificationService = require('./utils/integration/pushNotification');
 
 var auth = require('./utils/integration/authService');
 
@@ -393,8 +394,6 @@ app.post('/garage/:username/report', validate({ body: schemas.postGarageReportSc
  */
 app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationSchema}), auth.checkAuthorized, function(request, response){
 
-  // TODO: Push Notify!
-
   var responseBody = {};
 
   var policyForReg = {};
@@ -405,15 +404,26 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
       return item.relations.vehicle.toLowerCase() === request.body.crashReport.reg.toLowerCase();
     })[0];
 
-    responseBody.policy = policyForReg;
-    responseBody.message = "Success";
-    responseBody.data = request.body;
-    response.statusCode = 200;
-    response.setHeader('Content-Type', 'application/json');
-    response.write(JSON.stringify(responseBody));
-    response.end();
-    return;
+    userService.getUserPushTokens(policyForReg.relations.owner, function(results){
 
+      if (results instanceof Array){
+        // We all good
+        results.forEach(function(pushToken){
+          var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
+          pushNotificationService.send(pushToken, "Hope you're ok!", body)
+        });
+        responseBody.policy = policyForReg;
+        responseBody.message = "Success";
+        response.statusCode = 200;
+      } else {
+        responseBody.message = "No user to push notifications to!";
+        response.statusCode = 404;
+      }
+      response.setHeader('Content-Type', 'application/json');
+      response.write(JSON.stringify(responseBody));
+      response.end();
+      return;
+    });
   });
 });
 
