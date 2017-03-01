@@ -14,8 +14,8 @@ var raiseClaim = function(claim, username, callback){
   var args = [claim.relatedPolicy, claim.description, claim.incidentDate, claim.type];
 
   // Only required for multi-party; added here rather than within multi-party if so can push to args
-  if (claim.otherPartyReg){
-    args.push(claim.otherPartyReg, (claim.atFault === true))
+  if (claim.multiParty.otherPartyReg){
+    args.push(claim.multiParty.otherPartyReg, (claim.multiParty.atFault === true))
   };
 
   blockchainService.invoke("createClaim", args, username, callback);
