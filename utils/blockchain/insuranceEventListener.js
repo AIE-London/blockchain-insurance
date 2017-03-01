@@ -11,7 +11,7 @@ var init = function() {
     console.log("Received claim settled event for claimId: " + payload.claimId);
     
     paymentService.payoutClaim(payload.claimId,
-      payload.policyId, payload.user, config.blockchain.insurerUser);
+      payload.policyId, payload.user);
   });
 }
 

@@ -157,7 +157,8 @@ curl -H "Content-Type: application/json" -X POST -d '{
          "ctorMsg": {
              "function": "confirmPaidOut",
              "args": [
-                 "C1"
+                 "C1",
+                 "1"
              ]
          },
          "secureContext": "insurer1",

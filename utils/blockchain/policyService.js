@@ -13,7 +13,7 @@ var getPolicyWithId = function(policyId, username, callback) {
 
     for (var i = 0; i < policies.length; i++) {
       if (policies[i].id == policyId) {
-        callback(policyId);
+        callback(policies[i]);
         return
       }
     }

@@ -11,17 +11,36 @@ var getFullHistory = function(username, callback){
   blockchainService.query("retrieveAllClaims", [], username, callback);
 };
 
+//For now we're getting all the claims and iterating but this is obviously inefficient.
+//We should add a query to the chaincode for a specific claim id
+var getClaimWithId = function(claimId, username, callback) {
+  getFullHistory(username, function(result) {
+    var claims = JSON.parse(result.results);
+
+    for (var i = 0; i < claims.length; i++) {
+      if (claims[i].id == claimId) {
+        callback(claims[i]);
+        return
+      }
+    }
+
+    //claim not found
+    return callback();
+  });
+}
+
 var makeClaimAgreement = function(claimId, agreement, username, callback){
   blockchainService.invoke("agreePayoutAmount", [claimId, agreement.toString()], username, callback);
 };
 
-var confirmPaidOut = function(claimId, username, callback) {
-  blockchainService.invoke("confirmPaidOut", [claimId], username, callback);
+var confirmPaidOut = function(claimId, paymentId, username, callback) {
+  blockchainService.invoke("confirmPaidOut", [claimId, paymentId], username, callback);
 }
 
 module.exports = {
   raiseClaim: raiseClaim,
   getFullHistory: getFullHistory,
   makeClaimAgreement: makeClaimAgreement,
-  confirmPaidOut: confirmPaidOut
+  confirmPaidOut: confirmPaidOut,
+  getClaimWithId: getClaimWithId
 };
