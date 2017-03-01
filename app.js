@@ -415,14 +415,14 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
         responseBody.policy = policyForReg;
         responseBody.message = "Success";
         response.statusCode = 200;
-        return;
       } else {
         responseBody.message = "No user to push notifications to!";
         response.statusCode = 404;
-        response.setHeader('Content-Type', 'application/json');
-        response.write(JSON.stringify(responseBody));
-        response.end();
       }
+      response.setHeader('Content-Type', 'application/json');
+      response.write(JSON.stringify(responseBody));
+      response.end();
+      return;
     });
   });
 });
