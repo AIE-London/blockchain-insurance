@@ -410,7 +410,7 @@ app.post('/crash/notification/', validate({ body: schemas.postCrashNotificationS
         // We all good
         results.forEach(function(pushToken){
           var body = "Hi " + policyForReg.relations.owner + ", we have detected an impact on your vehicle " + request.body.crashReport.reg + ". Tap here to raise a claim against your policy " + policyForReg.id + "!";
-          pushNotificationService.send(pushToken, "")
+          pushNotificationService.send(pushToken, "Hope you're ok!", body)
         });
         responseBody.policy = policyForReg;
         responseBody.message = "Success";
