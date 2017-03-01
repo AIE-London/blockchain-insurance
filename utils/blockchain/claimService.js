@@ -7,7 +7,7 @@ var raiseClaim = function(claim, username, callback){
   // Map UI Types to Blockchain Types
   if (claim.type.toLowerCase() === "multiple party"){
     claim.type = "multiple_parties";
-  } else if (claim.type.toLowerCase() === "Single Party"){
+  } else if (claim.type.toLowerCase() === "single party"){
     claim.type = "single_party";
   }
 
