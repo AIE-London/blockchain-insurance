@@ -41,8 +41,8 @@ var confirmPaidOutForInsurer = function(claimId, policyId, insurerUsername) {
         var payment = claim.details.settlement.payments[i]
         if (payment.sender = insurerUsername) {
 
-          //If this is a multi party claim and we're not liable, dont payout until the other insurer has paid us
-          if (claim.details.liable == false || hasPaidPaymentFromLiableInsurer(claim, insurerUsername)) {
+          //If we're not liable, dont payout until the other insurer has paid us
+          if (claim.details.liable == true || hasPaidPaymentFromLiableInsurer(claim, insurerUsername)) {
             claimService.confirmPaidOut(claimId, payment.id, insurerUsername, function (result) {
               if (result.error) {
                 console.error("There was a problem when marking the claim as paid in the blockchain: " + result.error);
