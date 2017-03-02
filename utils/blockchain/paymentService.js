@@ -4,7 +4,7 @@ var emailService = require('../integration/emailService');
 var config = require('config');
 
 //Payments would be made off chain and then call back into the chain to confirm payment
-var payoutClaim = function(claimId, policyId) {
+var payoutClaim = function(claimId, policyId, linkedClaimId) {
   console.log("'Paying out' claim with id: " + claimId);
   
   //Actual payment logic would start here in a production system
@@ -19,6 +19,10 @@ var payoutClaim = function(claimId, policyId) {
 
     if (role == "insurer") {
       confirmPaidOutForInsurer(claimId, policyId, user.enrollmentId);
+
+      if (linkedClaimId) {
+        confirmPaidOutForInsurer(linkedClaimId, policyId, user.enrollmentId)
+      }
     }
   }
 }
@@ -39,7 +43,7 @@ var confirmPaidOutForInsurer = function(claimId, policyId, insurerUsername) {
     if (claim) {
       for (var i = 0; i < claim.details.settlement.payments.length; i++) {
         var payment = claim.details.settlement.payments[i]
-        if (payment.sender = insurerUsername) {
+        if (payment.sender == insurerUsername) {
 
           //If we're not liable, dont payout until the other insurer has paid us
           if (claim.details.liable == true || hasPaidPaymentFromLiableInsurer(claim, insurerUsername)) {

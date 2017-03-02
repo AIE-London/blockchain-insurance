@@ -742,7 +742,11 @@ func (t *InsuranceChaincode) agreePayoutAmount(stub shim.ChaincodeStubInterface,
 		//Add pending payments to claim
 		theClaim, err = t.addPendingPaymentsToClaim(stub, theClaim, policy)
 
-		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy)
+		//TODO Assuming one linked claim for now
+		var linkedClaim string
+		if len(theClaim.Relations.LinkedClaims) > 0 { linkedClaim = theClaim.Relations.LinkedClaims[0]}
+
+		event := NewClaimSettledEvent(theClaim.Id, theClaim.Relations.RelatedPolicy, linkedClaim)
 
 		eventBytes, err := json.Marshal(event);
 		if err != nil {fmt.Printf("AGREE_PAYOUT_AMOUNT Error: Unable to add pending payment: %s\n", err); return nil, err}
@@ -831,11 +835,6 @@ func (t *InsuranceChaincode) addPendingPaymentFromOtherPartyInsurer(stub shim.Ch
 	//Double enter the payment to the liable claim list of payments
 	liableClaim.AddPayment(payment)
 	_, err = SaveClaim(stub, liableClaim)
-
-	//Fire Insurer payment added event
-	event := NewInsurerPaymentAddedEvent(liableClaim.Id, liableClaim.Relations.RelatedPolicy)
-	eventBytes, _ := json.Marshal(event)
-	stub.SetEvent(event.Type, eventBytes)
 
 	if err != nil { return claim, err }
 
