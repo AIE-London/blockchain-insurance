@@ -1,9 +1,10 @@
 var claimService = require('./claimService');
+var policyService = require('./policyService');
 var emailService = require('../integration/emailService');
 var config = require('config');
 
 //Payments would be made off chain and then call back into the chain to confirm payment
-var payoutClaim = function(claimId, policyId, policyOwner) {
+var payoutClaim = function(claimId, policyId) {
   console.log("'Paying out' claim with id: " + claimId);
   
   //Actual payment logic would start here in a production system
@@ -17,7 +18,7 @@ var payoutClaim = function(claimId, policyId, policyOwner) {
     var role = getRoleForUser(user);
 
     if (role == "insurer") {
-      confirmPaidOutForInsurer(claimId, policyId, policyOwner, user.enrollmentId);
+      confirmPaidOutForInsurer(claimId, policyId, user.enrollmentId);
     }
   }
 }
@@ -32,30 +33,52 @@ var getRoleForUser = function(user) {
   }
 }
 
-var confirmPaidOutForInsurer = function(claimId, policyId, policyOwner, insurerUsername) {
+var confirmPaidOutForInsurer = function(claimId, policyId, insurerUsername) {
 
   claimService.getClaimWithId(claimId, insurerUsername, function(claim) {
     if (claim) {
       for (var i = 0; i < claim.details.settlement.payments.length; i++) {
         var payment = claim.details.settlement.payments[i]
         if (payment.sender = insurerUsername) {
-          claimService.confirmPaidOut(claimId, payment.id, insurerUsername, function (result) {
-            if (result.error) {
-              console.error("There was a problem when marking the claim as paid in the blockchain: " + result.error);
-            } else {
-              console.log("confirmPaidOut invoked for claimId: " + claimId);
-              if (payment.recipientType == "claimant") {
-                sendEmail(claimId, policyId, policyOwner);
+
+          //If this is a multi party claim and we're not liable, dont payout until the other insurer has paid us
+          if (claim.details.liable == false || hasPaidPaymentFromLiableInsurer(claim, insurerUsername)) {
+            claimService.confirmPaidOut(claimId, payment.id, insurerUsername, function (result) {
+              if (result.error) {
+                console.error("There was a problem when marking the claim as paid in the blockchain: " + result.error);
+              } else {
+                console.log("confirmPaidOut invoked for claimId: " + claimId);
+                if (payment.recipientType == "claimant") {
+                  policyService.getPolicyWithId(policyId, insurerUsername, function(policy){
+                    if (policy) {
+                      sendEmail(claimId, policyId, policy.relations.owner);
+                    } else {
+                      console.log("Unable to send email because we failed to retrieve the policy");
+                    }
+                  });
+                }
               }
-            }
-          });
+            });
+          }
         }
       }
     } else {
       console.log("Cannot get claim with id: " + claimId + " for insurer: " + insurerUsername + ". This may be expected");
     }
   })
-}
+};
+
+var hasPaidPaymentFromLiableInsurer = function(claim, insurerUsername) {
+  for (var i = 0; i < claim.details.settlement.payments.length; i++) {
+    var payment = claim.details.settlement.payments[i]
+
+    if (payment.recipient == insurerUsername && payment.senderType == "insurer" && payment.status == "paid") {
+      return true;
+    }
+  }
+
+  return false
+};
 
 var sendEmail = function(claimId, policyId, policyOwner) {
   var emailAddress = getEmailAddress(policyOwner);

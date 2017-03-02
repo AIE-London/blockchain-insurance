@@ -158,6 +158,7 @@ func NewClaim(id string, relatedPolicy string, description string, incidentDate 
 	claim.Details.Incident.Date = incidentDate
 	claim.Details.Incident.Type = incidentType
 	claim.Details.Settlement.Payments = []ClaimDetailsSettlementPayment{}
+	claim.Details.IsLiable = true
 
 	return claim
 }
