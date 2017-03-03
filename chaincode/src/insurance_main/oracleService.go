@@ -13,8 +13,8 @@ import (
 const ORACLE_HOST_KEY = "oracleHost"
 
 func InitOracleService(stub shim.ChaincodeStubInterface, args []string) {
-	if (len(args) >= 2) {
-		stub.PutState(ORACLE_HOST_KEY, []byte(args[1]))
+	if (len(args) >= 3) {
+		stub.PutState(ORACLE_HOST_KEY, []byte(args[2]))
 	} else {
 		stub.DelState(ORACLE_HOST_KEY)
 	}

@@ -30,6 +30,25 @@ curl -H "Content-Type: application/json" -X POST -d '{
 }' http://localhost:7050/chaincode
 sleep 3
 
+printf "\n*** Deploying Settlements chaincode ***\n"
+curl -H "Content-Type: application/json" -X POST -d '{
+  "jsonrpc": "2.0",
+  "method": "deploy",
+  "params": {
+    "type": 1,
+    "chaincodeID":{
+        "name": "insurancesettlements"
+    },
+    "ctorMsg": {
+        "function":"init",
+        "args": ["insurancecrud"]
+    },
+    "secureContext": "insurer1"
+  },
+  "id": 1
+}' http://localhost:7050/chaincode
+sleep 3
+
 #"args": ["localhost:3000"]
 printf "\n*** Deploying main chaincode ***\n"
 curl -H "Content-Type: application/json" -X POST -d '{
@@ -42,7 +61,7 @@ curl -H "Content-Type: application/json" -X POST -d '{
     },
     "ctorMsg": {
         "function":"init",
-        "args": ["insurancecrud"]
+        "args": ["insurancecrud", "insurancesettlements"]
     },
     "secureContext": "insurer1"
   },
@@ -373,7 +392,23 @@ sleep 3
         "id": 3
     }' http://localhost:7050/chaincode
 
-
+printf "\n*** Retrieving payments***\n"
+   curl -H "Content-Type: application/json" -X POST -d '{
+        "jsonrpc": "2.0",
+        "method": "query",
+        "params": {
+            "type": 1,
+            "chaincodeID": {
+                "name": "insurancesettlements"
+            },
+            "ctorMsg": {
+                "function": "retrieveUnsettledPayments"
+            },
+            "secureContext": "claimant2",
+   				 "attributes": ["username","role"]
+        },
+        "id": 3
+    }' http://localhost:7050/chaincode
 
 
 

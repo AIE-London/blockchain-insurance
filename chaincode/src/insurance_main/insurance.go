@@ -47,6 +47,7 @@ func main() {
 func (t *InsuranceChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
 	InitDao(stub, args[0])
+	InitPaymentService(stub, args[1])
 	InitOracleService(stub, args)
 	InitReferenceData(stub)
 
@@ -880,8 +881,14 @@ func (t *InsuranceChaincode) confirmPaidOut(stub shim.ChaincodeStubInterface, ca
 	_, err = SaveClaim(stub, theClaim)
 
 	err = t.updateLinkedPayments(stub, theClaim, payment)
-	if err != nil { fmt.Printf("Unable to update linked payments: %s", err) }
-	
+	if err != nil { fmt.Printf("Unable to update linked payments: %s", err); return nil, err}
+
+	if payment.RecipientType == PAYMENT_TYPE_INSURER {
+		//Currently not checking for errors. Should be changed post hackathon
+		//TODO This assumes only one linked claim
+		AddInsurerPayment(stub, payment, theClaim.Relations.LinkedClaims[0])
+	}
+
 	return nil, err
 }
 
