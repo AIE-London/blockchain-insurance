@@ -43,6 +43,7 @@ var confirmPaidOutForInsurer = function(claimId, policyId, insurerUsername) {
     if (claim) {
       for (var i = 0; i < claim.details.settlement.payments.length; i++) {
         var payment = claim.details.settlement.payments[i]
+        
         if (payment.sender == insurerUsername) {
 
           //If we're not liable, dont payout until the other insurer has paid us
