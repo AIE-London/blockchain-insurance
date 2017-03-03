@@ -46,16 +46,18 @@ func (t *InsuranceCrudChaincode) Init(stub shim.ChaincodeStubInterface, function
 func (t *InsuranceCrudChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("invoke is running " + function)
 
+	//Allow init to be run externally
+	if function == "init" {
+		return t.Init(stub, "init", args)
+	}
+
 	//Check that this chaincode was invoked internally by another chaincode contract
 	if !t.isTxIdValid(stub, args) {
 		fmt.Println("TxId does not match, aborting")
 		return nil, errors.New("TxId does not match")
 	}
 
-	// Handle different functions
-	if function == "init" {
-		return t.Init(stub, "init", args)
-	} else if function == "save" {
+	if function == "save" {
 		return t.save(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function)
