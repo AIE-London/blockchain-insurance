@@ -8,8 +8,8 @@ var getFullHistory = function(username, callback){
 //For now we're getting all the policies and iterating but this is obviously inefficient.
 //We should add a query to the chaincode for a specific policy id
 var getPolicyWithId = function(policyId, username, callback) {
-  getFullHistory(username, function(policies) {
-    console.log(policies);
+  getFullHistory(username, function(result) {
+    var policies = JSON.parse(result.results);
 
     for (var i = 0; i < policies.length; i++) {
       if (policies[i].id == policyId) {
