@@ -48,6 +48,7 @@ schemas.authSchema = require("./config/schemas/authSchema.json");
 schemas.postClaimSchema = require("./config/schemas/postClaimSchema.json");
 schemas.postGarageReportSchemas = require('./config/schemas/postGarageReportSchema.json');
 schemas.postPayoutAgreementSchema = require('./config/schemas/postPayoutAgreementSchema.json');
+schemas.postPayoutAgreementSchema = require('./config/schemas/postLiabilityAgreementSchema.json');
 schemas.postCrashNotificationSchema = require('./config/schemas/postCrashNotificationSchema.json');
 
 /**
@@ -74,6 +75,7 @@ swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.de
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postClaimSchema.json"), "postClaimSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postGarageReportSchema.json"), "postGarageReportSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postPayoutAgreementSchema.json"), "postPayoutAgreementSchema");
+swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postLiabilityAgreementSchema.json"), "postLiabilityAgreementSchema");
 swaggerSpec.definitions = objectHelperFunctions.deReferenceSchema(swaggerSpec.definitions, require("./config/schemas/postCrashNotificationSchema.json"), "postCrashNotificationSchema");
 
 /**
@@ -313,6 +315,61 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
 
   });
 });
+
+/**
+ * @swagger
+ * /claimant/{username}/claim/{claimId}/liability/agreement:
+ *   post:
+ *     tags:
+ *       - blockchain-insurance
+ *     description: To post liabilty agreement
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: username
+ *         description: the username
+ *         in: path
+ *         type: string
+ *         required: true
+ *       - name: claimId
+ *         description: Id of the claim
+ *         in: path
+ *         type: string
+ *         required: true
+ *       - name: post-liability-agreement-schema
+ *         description: agreement
+ *         in: body
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/postLiabilityAgreementSchema'
+ *     responses:
+ *       200:
+ *         description: Successful
+ */
+app.post('/claimant/:username/claim/:claimId/liability/agreement', validate({ body: schemas.postPayoutAgreementSchema}), auth.checkAuthorized, function(request, response){
+
+  var responseBody = {};
+
+  claimService.makeLiabilityAgreement(request.params.claimId, request.body.agreement, request.params.username, function(res){
+    if (res.error){
+      responseBody.error = res.error;
+      response.statusCode = 500;
+    } else if (res.results){
+      responseBody.results = res.results;
+      response.statusCode = 200;
+    } else {
+      responseBody.error = "unknown issue";
+      response.statusCode = 500;
+    }
+
+    response.setHeader('Content-Type', 'application/json');
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    return;
+
+  });
+});
+
 
 /**
  * @swagger
