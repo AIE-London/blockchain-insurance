@@ -4,7 +4,7 @@
     "eventsAddress": "services-uscentral.skytap.com:8560",
     "memberssvcAddress": "services-uscentral.skytap.com:8447",
     "keystorePath": "/keyValStore",
-    "chaincodeId": "8f0365833e766586813d6eefdcfdc9f7fc34028fe88497923f6bfc7552988bdc8d809a74f59068dcb66bd858aa8cbd68985eac3a59885a414468126c0f4a847c",
+    "chaincodeId": "6d84f7985656fe782b93c7e986da6e8aa33eae1df777ce6a988931aedc2291cdf477c33cc02051334a42cf33180e25169d0fdd4a0d2d59b6c6ae170c27f8b3af",
     "devMode": false,
     "registrarUser": {
       "enrollmentId": "WebAppAdmin",
