@@ -48,7 +48,7 @@ schemas.authSchema = require("./config/schemas/authSchema.json");
 schemas.postClaimSchema = require("./config/schemas/postClaimSchema.json");
 schemas.postGarageReportSchemas = require('./config/schemas/postGarageReportSchema.json');
 schemas.postPayoutAgreementSchema = require('./config/schemas/postPayoutAgreementSchema.json');
-schemas.postPayoutAgreementSchema = require('./config/schemas/postLiabilityAgreementSchema.json');
+schemas.postLiabilityAgreementSchema = require('./config/schemas/postLiabilityAgreementSchema.json');
 schemas.postCrashNotificationSchema = require('./config/schemas/postCrashNotificationSchema.json');
 
 /**
@@ -346,7 +346,7 @@ app.post('/claimant/:username/claim/:claimId/payout/agreement', validate({ body:
  *       200:
  *         description: Successful
  */
-app.post('/claimant/:username/claim/:claimId/liability/agreement', validate({ body: schemas.postPayoutAgreementSchema}), auth.checkAuthorized, function(request, response){
+app.post('/claimant/:username/claim/:claimId/liability/agreement', validate({ body: schemas.postLiabilityAgreementSchema}), auth.checkAuthorized, function(request, response){
 
   var responseBody = {};
 
