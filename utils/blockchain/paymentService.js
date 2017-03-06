@@ -40,9 +40,9 @@ var getRoleForUser = function(user) {
 var confirmPaidOutForInsurer = function(claimId, policyId, insurerUsername) {
 
   claimService.getClaimWithId(claimId, insurerUsername, function(claim) {
-    if (claim) {
+    if (claim && claim.details.settlement && claim.details.settlement.payments) {
       for (var i = 0; i < claim.details.settlement.payments.length; i++) {
-        var payment = claim.details.settlement.payments[i]
+        var payment = claim.details.settlement.payments[i];
         
         if (payment.sender == insurerUsername) {
 
