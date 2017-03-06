@@ -41,20 +41,25 @@ var getClaimWithId = function(claimId, username, callback) {
     //claim not found
     return callback();
   });
-}
+};
 
 var makeClaimAgreement = function(claimId, agreement, username, callback){
   blockchainService.invoke("agreePayoutAmount", [claimId, agreement.toString()], username, callback);
 };
 
+var makeLiabilityAgreement = function(claimId, agreement, username, callback){
+  blockchainService.invoke("declareLiability ", [claimId, agreement.toString()], username, callback);
+};
+
 var confirmPaidOut = function(claimId, paymentId, username, callback) {
   blockchainService.invoke("confirmPaidOut", [claimId, paymentId], username, callback);
-}
+};
 
 module.exports = {
   raiseClaim: raiseClaim,
   getFullHistory: getFullHistory,
   makeClaimAgreement: makeClaimAgreement,
   confirmPaidOut: confirmPaidOut,
-  getClaimWithId: getClaimWithId
+  getClaimWithId: getClaimWithId,
+  makeLiabilityAgreement: makeLiabilityAgreement
 };

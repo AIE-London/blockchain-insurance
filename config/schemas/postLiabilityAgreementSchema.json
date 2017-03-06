@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "AIE JSON",
+  "description": "AIE JSON",
+  "type": "object",
+  "properties": {
+    "agreement": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "agreement"
+  ],
+  "additionalProperties": false
+}
