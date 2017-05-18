@@ -27,7 +27,7 @@ To test it is up and running properly hit [http://localhost:7050/chain](http://l
 Execute the following commands after running docker-compose (from the docker-compose folder)
 
 ```
-docker cp memberssvc/membersrvc.yaml dockercompose_membersrvc_1:/opt/gopath/src/github.com/hyperledger/fabric/membersrvc
+docker cp membersrvc/membersrvc.yaml dockercompose_membersrvc_1:/opt/gopath/src/github.com/hyperledger/fabric/membersrvc
 docker exec -i -t dockercompose_membersrvc_1 /bin/bash
 rm -rf /var/hyperledger/production
 exit
