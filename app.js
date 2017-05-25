@@ -30,12 +30,10 @@ var express = require('express'), http = require('http'), path = require('path')
 var app = express();
 var server = http.createServer(app);
 socketIntegration.initialise(server);
-server.listen(process.env.PORT || 3000, function(){
-  console.log("Ready to go");
-});
 
-blockchainSetup.setupNetwork();
-eventListener.init();
+blockchainSetup.setupNetwork()
+  .then(eventListener.init);
+
 
 /**
  * JSON Schema Validation

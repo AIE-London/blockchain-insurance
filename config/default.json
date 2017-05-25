@@ -13,7 +13,7 @@
     "oracleUser" : "oracle",
     "insurerUser": "insurer1",
     "setup": {
-      "shouldSetupUsers": false,
+      "shouldSetupUsers": true,
       "deploy": {
         "waitTime": 5,
         "functionName": "init",

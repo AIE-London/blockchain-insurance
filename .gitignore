@@ -38,8 +38,12 @@ jspm_packages
 
 # Custom
 .idea
+.vscode
 config/credentials/ibm_blockchain_credentials.json
 config/credentials/gcm.json
+config.json
+vcap-services.json
+keyValStore-4a780ee6
 
 # The build Packages
 chaincode/pkg

@@ -26,8 +26,19 @@ var chain;
 /** NETWORK **/
 var network = {};
 var deployUser;
-var PEER_ADDRESS = config.blockchain.peerAddress;
-var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
+let VCAP_SERVICES = process.env.VCAP_SERVICES;
+if (!VCAP_SERVICES) {
+  VCAP_SERVICES = require('../../vcap-services.json');
+} else {
+  VCAP_SERVICES = JSON.parse(VCAP_SERVICES);
+}
+let BLOCKCHAIN_MEMBER_SVC = VCAP_SERVICES['ibm-blockchain-5-prod'][0].credentials.ca;
+let MEMBER_SVC = BLOCKCHAIN_MEMBER_SVC[Object.keys(BLOCKCHAIN_MEMBER_SVC)[0]];
+
+let BLOCKCHAIN_PEER = VCAP_SERVICES['ibm-blockchain-5-prod'][0].credentials.peers[0];
+var PEER_ADDRESS = BLOCKCHAIN_PEER.api_host + BLOCKCHAIN_PEER.api_port;
+var MEMBERSRVC_ADDRESS = MEMBER_SVC.api_host + MEMBER_SVC.api_port;
+let USERS = VCAP_SERVICES['ibm-blockchain-5-prod'][0].credentials.users;
 var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 
 /** FUNCTIONS **/
@@ -112,20 +123,21 @@ var enrollDeployUser = function() {
  */
 var enrollRegistrarUser = function(user){
   return new Promise(function(resolve, reject){
-    console.log("LOG: Enrolling Registrar: " + user.enrollmentId + " - " + user.enrollSecret);
-    chain.enroll(user.enrollmentId, user.enrollSecret, function(err, registrarUser){
+    console.log("LOG: Enrolling Registrar: " + user.enrollId + " - " + user.enrollSecret);
+    chain.enroll(user.enrollId, user.enrollSecret, function(err, registrarUser){
       if (err) {
         console.log("Error enrolling registrar...maybe already enrolled?");
         console.error(err);
-        chain.getUser(user.enrollmentId, function (err, registrarUserFromGet) {
+        chain.getUser(user.enrollId, function (err, registrarUserFromGet) {
           if (err) {
             console.log("ERROR");
             console.error(err);
-            throw Error ("\nError: failed to enroll registrar user " + user.enrollmentId + ": " + err);
+            throw Error ("\nError: failed to enroll registrar user " + user.enrollId + ": " + err);
           }
+          resolve(user);
         })
       } else {
-        console.log("LOG: Enrolled New User: " + user.enrollmentId);
+        console.log("LOG: Enrolled New User: " + user.enrollId);
         resolve(registrarUser);
       }
     })
@@ -168,10 +180,16 @@ var setupNetwork = function(){
   setupCertificates();
   console.log("Completed setupCertificates");
   if (config.blockchain.setup.shouldSetupUsers) {
-    return enrollRegistrarUser(config.blockchain.registrarUser)
+    return enrollRegistrarUser(USERS[0])
       .then(configureRegistrar)
+      .then(function() {
+        console.log("Registrar Configured");
+      })
       .then(enrollNewUsers)
-      //.then(enrollDeployUser)
+      .then(function() {
+        console.log("New Users Enrolled");
+      })
+      .then(enrollDeployUser)
       //.then(deployChaincode)
       .then(function() {
         console.log("Setup completed");
@@ -284,7 +302,7 @@ var enrollNewUser = function(newUser){
 
   if (!chain.getRegistrar()){
     console.log("Registrar not set...enrolling");
-    return enrollRegistrarUser(config.blockchain.registrarUser)
+    return enrollRegistrarUser(USERS[0])
       .then(configureRegistrar)
       .then(function(){
         return newUser;

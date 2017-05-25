@@ -1,11 +1,22 @@
 var hfc = require('hfc');
 var config = require('config')
 
-var PEER_ADDRESS = config.blockchain.peerAddress;
-var EVENTS_ADDRESS = config.blockchain.eventsAddress;
-var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
-var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
-var CHAINCODE_ID  = config.blockchain.chaincodeId;
+let VCAP_SERVICES = process.env.VCAP_SERVICES;
+if (!VCAP_SERVICES) {
+  VCAP_SERVICES = require('../../vcap-services.json');
+} else {
+  VCAP_SERVICES = JSON.parse(VCAP_SERVICES);
+}
+let BLOCKCHAIN_MEMBER_SVC = VCAP_SERVICES['ibm-blockchain-5-prod'][0].credentials.ca;
+let MEMBER_SVC = BLOCKCHAIN_MEMBER_SVC[Object.keys(BLOCKCHAIN_MEMBER_SVC)[0]];
+
+let BLOCKCHAIN_PEER = VCAP_SERVICES['ibm-blockchain-5-prod'][0].credentials.peers[0];
+let PEER_ADDRESS = BLOCKCHAIN_PEER.api_host + BLOCKCHAIN_PEER.api_port;
+let MEMBERSRVC_ADDRESS = MEMBER_SVC.api_host + MEMBER_SVC.api_port;
+let KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
+let EVENTS_ADDRESS = BLOCKCHAIN_PEER.event_host + BLOCKCHAIN_PEER.event_port;
+let CHAINCODE_ID  = process.env.CHAINCODE_ID;
+
 var ATTRS = ['username', 'role'];
 
 var chain = hfc.newChain("insurance");
