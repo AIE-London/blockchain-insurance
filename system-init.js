@@ -39,31 +39,47 @@ var cert = fs.readFileSync(certFile);
 
 // Set the URL for member services
 console.log(MEMBERSRVC_ADDRESS);
-chain.setMemberServicesUrl("grpc://lol.lol");
+chain.setECDSAModeForGRPC(true);
+chain.addPeer("grpc://" + PEER_ADDRESS);
+chain.setMemberServicesUrl("grpc://" + MEMBERSRVC_ADDRESS, {
+  pem: cert
+});
 
 // Enroll "WebAppAdmin" which is already registered because it is
 // listed in fabric/membersrvc/membersrvc.yaml with its one time password.
 // If "WebAppAdmin" has already been registered, this will still succeed
 // because it stores the state in the KeyValStore
 // (i.e. in '/tmp/keyValStore' in this sample).
-chain.enroll(USERS[0].enrollId, USERS[0].enrollSecret, function(err, admin) {
+chain.enroll(USERS[1].enrollId, USERS[1].enrollSecret, function(err, admin) {
    if (err) {
      return console.log("ERROR: failed to enroll %s",err);
    }
-   console.log("SUCCESS: Enrolled: %s", USERS[0].enrollId);
+   console.log("SUCCESS: Enrolled: %s", USERS[1].enrollId);
    // Successfully enrolled WebAppAdmin during initialization.
    // Set this user as the chain's registrar which is authorized to register other users.
    chain.setRegistrar(admin);
    // Now begin listening for web app requests
    var registrationRequests = config.users;
-   registrationRequests.map(user => {
-    return new Promise((resolve, reject) => {
+   //registrationRequests.map(user => {
+    //return new Promise((resolve, reject) => {
       chain.register({
-        enrollmentID: user.enrollmentId,
-        attributes: user.attributes,
-        affiliation: user.affiliation
+        enrollmentID: "claimant1",
+        "affiliation": "group1",
+        "attributes": [
+          {
+            "name": "username",
+            "value": "claimant1"
+          },
+          {
+            "name": "role",
+            "value": "policyholder"
+          }
+        ]
       }, function(err, createdUser) {
-        if (err) return console.log("ERROR: failed to register %s",err);
+        if (err) {
+          console.log("ERROR: failed to register %s", err);
+          throw err;
+        }
         // Issue an invoke request
         blockchain.enroll(PEER_ADDRESS, {
           enrollId: user.enrollmentId,
@@ -71,13 +87,13 @@ chain.enroll(USERS[0].enrollId, USERS[0].enrollSecret, function(err, admin) {
         })
         .then(() => {
           console.log("Enrolled: " + user.enrollmentId )
-          resolve();
+          //resolve();
         })
         .catch(err => console.log("ERROR: failed to enroll %s",err));
       });
-    });
-   });
+    //});
+   //});
    Promise.all(registrationRequests).then(() => {
-      deploy.deploy(PEER_ADDRESS, USERS[2]);
+      //deploy.deploy(PEER_ADDRESS, USERS[1]);
    })
 });
