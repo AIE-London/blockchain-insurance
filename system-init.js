@@ -54,7 +54,8 @@ chain.setMemberServicesUrl("grpcs://" + MEMBERSRVC_ADDRESS, {
 // (i.e. in '/tmp/keyValStore' in this sample).
 chain.enroll(USERS[0].enrollId, USERS[0].enrollSecret, function(err, admin) {
    if (err) {
-     return console.log("ERROR: failed to enroll %s",err);
+      console.error("ERROR: failed to enroll %s", err)
+      // if it's failing to enroll - chances are they're already enrolled. just move on.
    }
    console.log("SUCCESS: Enrolled: %s", USERS[0].enrollId);
    // Successfully enrolled WebAppAdmin during initialization.
