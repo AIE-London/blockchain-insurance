@@ -4,7 +4,18 @@ A proof of concept Blockchain project around Car Insurance.
 
 ## Deploy this to Bluemix
 
-[![Deploy to Bluemix](https://bluemix.net/deploy/button.png)](https://bluemix.net/deploy?repository=https://github.com/Capgemini-AIE/blockchain-insurance&branch=feature/self-deploying)
+[![Deploy to Bluemix](https://bluemix.net/deploy/button.png)](https://bluemix.net/deploy?repository=https://github.com/Capgemini-AIE/blockchain-insurance)
+
+To deploy to Bluemix:
+
+1) Hit the button above.
+2) Open the created pipeline, inspect the 'credentials' step & add missing environment property values.
+
+    APIKEY=EDMUNDS API KEY (sign up for one),
+    GCM_KEY=Google cloud messaging key for webpush.
+3) Open 'deploy' and add a basic CF deploy job.
+4) Run the pipeline from the start.
+5) If errors occur, bind an instance of IBM's blockchain service to the application & restage.
 
 ## Development Environment
 
