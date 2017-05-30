@@ -52,17 +52,16 @@ chain.setMemberServicesUrl("grpcs://" + MEMBERSRVC_ADDRESS, {
 // If "WebAppAdmin" has already been registered, this will still succeed
 // because it stores the state in the KeyValStore
 // (i.e. in '/tmp/keyValStore' in this sample).
-chain.enroll(USERS[1].enrollId, USERS[1].enrollSecret, function(err, admin) {
+chain.enroll(USERS[0].enrollId, USERS[0].enrollSecret, function(err, admin) {
    if (err) {
      return console.log("ERROR: failed to enroll %s",err);
    }
-   console.log("SUCCESS: Enrolled: %s", USERS[1].enrollId);
+   console.log("SUCCESS: Enrolled: %s", USERS[0].enrollId);
    // Successfully enrolled WebAppAdmin during initialization.
    // Set this user as the chain's registrar which is authorized to register other users.
    chain.setRegistrar(admin);
    // Now begin listening for web app requests
-   var registrationRequests = config.users;
-   registrationRequests.map(user => {
+   let registrationRequests = config.users.map(user => {
     return new Promise((resolve, reject) => {
       console.log("[Registration] Submitting request for user: " + user.enrollmentId);
       chain.register({
@@ -72,8 +71,8 @@ chain.enroll(USERS[1].enrollId, USERS[1].enrollSecret, function(err, admin) {
       }, function(err, createdUser) {
         console.log("[Registration] SUCCESSFULLY registered user: " + user.enrollmentId);
         if (err) {
-          console.log("ERROR: failed to register %s", err);
-          throw err;
+          console.error("ERROR: failed to register %s", err);
+          //throw err;
         }
         // Issue an invoke request
         blockchain.enroll(PEER_ADDRESS, {
