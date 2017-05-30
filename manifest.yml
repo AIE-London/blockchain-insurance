@@ -1,3 +1,7 @@
+declared-services: 
+  hyperledger-insurance: 
+    label: ibm-blockchain-5-prod 
+    plan: ibm-blockchain-plan-5-prod 
 applications:
 - path: .
   memory: 256M
@@ -6,3 +10,5 @@ applications:
   name: blockchain-insurance
   host: blockchain-insurance
   disk_quota: 256M
+  services:
+    - hyperledger-insurance
