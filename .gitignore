@@ -44,6 +44,7 @@ config/credentials/gcm.json
 config.json
 vcap-services.json
 keyValStore-4a780ee6
+chaincodeIDs.json
 
 # The build Packages
 chaincode/pkg

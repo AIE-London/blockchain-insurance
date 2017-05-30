@@ -3,7 +3,7 @@
   "version": "0.0.2",
   "private": true,
   "scripts": {
-    "start": "node app.js",
+    "start": "node system-init && node app.js",
     "test": "jasmine-node spec",
     "deploy-wiremock": "node wiremock-deploy"
   },

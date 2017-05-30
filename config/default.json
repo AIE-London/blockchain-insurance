@@ -177,6 +177,8 @@
     "http://localhost:3001",
     "https://localhost:8080",
     "http://localhost:8080",
+    "https://localhost:8081",
+    "http://localhost:8081",
     "http://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net",
     "https://blockchain-insurance-claimant-dashboard.eu-gb.mybluemix.net",
     "http://blockchain-insurance-garage-dashboard.eu-gb.mybluemix.net",

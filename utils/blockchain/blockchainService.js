@@ -15,7 +15,9 @@ let PEER_ADDRESS = BLOCKCHAIN_PEER.api_host + BLOCKCHAIN_PEER.api_port;
 let MEMBERSRVC_ADDRESS = MEMBER_SVC.api_host + MEMBER_SVC.api_port;
 let KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
 let EVENTS_ADDRESS = BLOCKCHAIN_PEER.event_host + BLOCKCHAIN_PEER.event_port;
-let CHAINCODE_ID  = process.env.CHAINCODE_ID;
+
+let chaincodeConfig = require('../../chaincodeIDs.json');
+let CHAINCODE_ID  = chaincodeConfig.chaincodeHash;
 
 var ATTRS = ['username', 'role'];
 

@@ -31,6 +31,8 @@ var app = express();
 var server = http.createServer(app);
 socketIntegration.initialise(server);
 
+let chaincodeConfig = require('./chaincodeIDs.json');
+
 blockchainSetup.setupNetwork()
   .then(eventListener.init);
 
@@ -91,9 +93,11 @@ var apiPath = config.app.paths.api;
 // All Environments
 
 // Local Only
-if ('development' == app.get('env')) {
-  app.set('port', process.env.PORT || 3000);
-}
+//if ('development' == app.get('env')) {
+ // app.set('port', process.env.PORT || 3000);
+//}
+
+
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.engine('html', require('ejs').renderFile);
@@ -697,3 +701,5 @@ app.use(function(err, req, res, next) {
     next(err);
   }
 });
+
+app.listen(process.env.PORT || 3000);

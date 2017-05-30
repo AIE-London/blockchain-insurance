@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const fs = require('fs');
 
 const blockchain = require('./utils/blockchain/blockchain-helpers.js');
 
@@ -10,8 +11,23 @@ const deployMainChaincode = options => {
     [options.crudHash])
     .then(result => {
       console.log("[DEPLOY] Chaincode Deployed Successfully");
+      // Write hashes to environment variable
+      process.env.CHAINCODE_ID = result;
+      process.env.CHAINCODE_CRUD_ID = options.crudHash;
       // Read existing config return in and object along with api call result
-      return  { chaincodeHash: result.hash, crudHash: options.crudHash };
+      return  { chaincodeHash: result, crudHash: options.crudHash };
+    }).then(result => {
+      // write output
+      return new Promise((resolve, reject) => {
+        fs.writeFile(__dirname + "/chaincodeIDs.json", JSON.stringify(result), 'utf8', function (err) {
+          if (err) {
+              reject(err);
+          }
+
+          console.log("The file was saved!");
+          resolve();
+        });
+      });
     }).catch(error => {
       console.error("[DEPLOY] Chaincode deployment failed with error:");
       console.error(error);
