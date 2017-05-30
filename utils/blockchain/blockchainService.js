@@ -1,11 +1,25 @@
 var hfc = require('hfc');
 var config = require('config')
+let blockchain = require('./blockchain-helpers');
 
-var PEER_ADDRESS = config.blockchain.peerAddress;
-var EVENTS_ADDRESS = config.blockchain.eventsAddress;
-var MEMBERSRVC_ADDRESS = config.blockchain.memberssvcAddress;
-var KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
-var CHAINCODE_ID  = config.blockchain.chaincodeId;
+let VCAP_SERVICES = process.env.VCAP_SERVICES;
+if (!VCAP_SERVICES) {
+  VCAP_SERVICES = require('../../vcap-services.json');
+} else {
+  VCAP_SERVICES = JSON.parse(VCAP_SERVICES);
+}
+let BLOCKCHAIN_MEMBER_SVC = VCAP_SERVICES['ibm-blockchain-5-prod'][0].credentials.ca;
+let MEMBER_SVC = BLOCKCHAIN_MEMBER_SVC[Object.keys(BLOCKCHAIN_MEMBER_SVC)[0]];
+
+let BLOCKCHAIN_PEER = VCAP_SERVICES['ibm-blockchain-5-prod'][0].credentials.peers[0];
+let PEER_ADDRESS = BLOCKCHAIN_PEER.api_host + ":" + BLOCKCHAIN_PEER.api_port;
+let MEMBERSRVC_ADDRESS = MEMBER_SVC.api_host + MEMBER_SVC.api_port;
+let KEYSTORE_PATH = __dirname + config.blockchain.keystorePath;
+let EVENTS_ADDRESS = BLOCKCHAIN_PEER.event_host + BLOCKCHAIN_PEER.event_port;
+
+let chaincodeConfig = require('../../chaincodeIDs.json');
+let CHAINCODE_ID  = chaincodeConfig.chaincodeHash;
+
 var ATTRS = ['username', 'role'];
 
 var chain = hfc.newChain("insurance");
@@ -63,69 +77,32 @@ var login = function(name, secret, callback){
 };
 
 var loginAndInvoke = function(functionName, args, username, callback) {
-
-  console.log("Enrolling " + username);
-  chain.enroll(username, "123456789123", function (err, user) { // Enroll secret only used in dev mode
-    if (err) {
-      console.error(err);
-      console.log("Attemping to get user");
-
-      chain.getUser(username, function (err, userViaGet) {
-        if (err) {
-          console.error(err);
-          callback(err);
-          return;
-        }
-        invoke(functionName, args, userViaGet, callback);
-      });
-      return;
-    }
-    invoke(functionName, args, user, callback);
-
-  });
+    invoke(functionName, args, username, callback);
 };
 
-var invoke = function(functionName, args, user, callback) {
-  var invokeRequest = {
-    // Name (hash) required for invoke
-    chaincodeID: CHAINCODE_ID,
-    // Function to trigger
-    fcn: functionName,
-    // Parameters for the invoke function
-    args: args,
-    attrs: ATTRS
-  };
+var invoke = function(functionName, args, username, callback) {
+  console.log("Invoke request: " + functionName);
+  //var tx = user.invoke(invokeRequest);
 
-  console.log("Invoke request: " + JSON.stringify(invokeRequest));
-  var tx = user.invoke(invokeRequest);
-
-  // Listen for the 'submitted' event
-  tx.on('submitted', function(results) {
-    //callback(); -- Removed as we expect 'complete' to be triggered also, where we'd like the response
-    console.log("submitted invoke: %j",results);
-  });
-  // Listen for the 'complete' event.
-  tx.on('complete', function(results) {
-    console.log("completed invoke: %j",results);
-    callback({"results": results});
-  });
-  // Listen for the 'error' event.
-  tx.on('error', function(err) {
-    callback(err);
-    console.log("error on invoke: %j",err);
-  });
+  blockchain.invoke(PEER_ADDRESS, CHAINCODE_ID, username, functionName, args)
+    .then(response => {
+      callback({results: response.result.message});
+    })
+    .catch(error => {
+      callback(error);
+    });
 };
 
 var loginAndQuery = function(funcionName, args, username, callback){
-  login(username, "123456789123", function(user){ // Enroll secret only used in dev mode
+  //login(username, "123456789123", function(user){ // Enroll secret only used in dev mode
     console.log("--- USER ---");
-    console.log(user);
-    if (user.error){
-      callback(user.error);
-    } else {
-      query(funcionName, args, user, callback);
-    }
-  })
+    console.log(username);
+    //if (user.error){
+      //callback(user.error);
+    //} else {
+      query(funcionName, args, username, callback);
+   //}
+  //})
 };
 
 var query = function(functionName, args, user, callback){
@@ -138,22 +115,13 @@ var query = function(functionName, args, user, callback){
 
   console.log("QUERY REQUEST: " + JSON.stringify(queryRequest));
 
-  var tx = user.query(queryRequest);
-
-  tx.on('submitted', function(results) {
-    //callback(); -- Removed as we expect 'complete' to be triggered also, where we'd like the response
-    console.log("submitted query: %j",results);
-  });
-
-  tx.on('complete', function(results){
-    console.log("completed query: %j", results);
-    callback({"results": new Buffer(results.result,'hex').toString()});
-  });
-
-  tx.on('error', function(err){
-    console.log("error on query: %j", err);
-    callback(err);
-  })
+  blockchain.query(PEER_ADDRESS, CHAINCODE_ID, user, functionName, args)
+    .then(response => {
+      callback({results: response.result.message});
+    })
+    .catch(error => {
+      callback(error);
+    });
 };
 
 var registerEventListener = function(eventName, callback){

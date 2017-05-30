@@ -1,8 +1,6 @@
 var config =  require('config');
 
 // Integration
-var cloudantIntegration = require('./utils/integration/cloudantIntegration');
-
 var userService = require('./utils/integration/userService');
 var pushNotificationService = require('./utils/integration/pushNotification');
 
@@ -30,12 +28,12 @@ var express = require('express'), http = require('http'), path = require('path')
 var app = express();
 var server = http.createServer(app);
 socketIntegration.initialise(server);
-server.listen(process.env.PORT || 3000, function(){
-  console.log("Ready to go");
-});
 
-blockchainSetup.setupNetwork();
-eventListener.init();
+let chaincodeConfig = require('./chaincodeIDs.json');
+
+blockchainSetup.setupNetwork()
+  .then(eventListener.init);
+
 
 /**
  * JSON Schema Validation
@@ -93,9 +91,11 @@ var apiPath = config.app.paths.api;
 // All Environments
 
 // Local Only
-if ('development' == app.get('env')) {
-  app.set('port', process.env.PORT || 3000);
-}
+//if ('development' == app.get('env')) {
+ // app.set('port', process.env.PORT || 3000);
+//}
+
+
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.engine('html', require('ejs').renderFile);
@@ -699,3 +699,5 @@ app.use(function(err, req, res, next) {
     next(err);
   }
 });
+
+app.listen(process.env.PORT || 3000);
