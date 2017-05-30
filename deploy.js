@@ -25,7 +25,7 @@ const deployMainChaincode = options => {
           }
 
           console.log("The file was saved!");
-          resolve();
+          resolve(result);
         });
       });
     }).catch(error => {
@@ -57,6 +57,20 @@ let deploy = (endpoint, user) => {
           return options;
         })
         .then(deployMainChaincode)
+        .then(result => {
+          // Create policy
+          console.log("[SETUP] Invoking addPolicy");
+          return blockchain.invoke(endpoint, result.chaincodeHash, "insurer1", "addPolicy", [
+                 "claimant1",
+                 "2017-02-08",
+                 "2018-02-08",
+                 "100",
+                 "DZ14TYV"
+             ])
+             .then(result => {
+              console.log("[SETUP] Successfully invoked addPolicy");
+             });
+        })
         .catch(error => {
           console.error("[DEPLOY] Deploy of CRUD chaincode failed with error:");
           console.error(error);
