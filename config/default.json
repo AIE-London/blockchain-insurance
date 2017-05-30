@@ -143,22 +143,6 @@
       }
     ]
   },
-  "database": {
-    "cloudant": {
-      "credentials": {
-        "name": "blockchain-insurance-node-components",
-        "host": "3192651f-e858-4624-93ff-5b4569a41a6c-bluemix.cloudant.com",
-        "port": 443,
-        "user": "3192651f-e858-4624-93ff-5b4569a41a6c-bluemix",
-        "password": "a852067c8365bff3a28c2c3f35a5bd2c61203b02d32efb786d7d990260abde6a",
-        "url": "https://3192651f-e858-4624-93ff-5b4569a41a6c-bluemix:a852067c8365bff3a28c2c3f35a5bd2c61203b02d32efb786d7d990260abde6a@3192651f-e858-4624-93ff-5b4569a41a6c-bluemix.cloudant.com"
-      },
-      "messages": {
-        "dbExists": "Database already exists",
-        "dbCreated": "Database Created"
-      }
-    }
-  },
   "swagger": {
     "info": {
       "title": "Node Example Swagger API",

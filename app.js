@@ -1,8 +1,6 @@
 var config =  require('config');
 
 // Integration
-var cloudantIntegration = require('./utils/integration/cloudantIntegration');
-
 var userService = require('./utils/integration/userService');
 var pushNotificationService = require('./utils/integration/pushNotification');
 
