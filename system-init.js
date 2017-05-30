@@ -88,6 +88,6 @@ chain.enroll(USERS[0].enrollId, USERS[0].enrollSecret, function(err, admin) {
     });
    });
    Promise.all(registrationRequests).then(() => {
-      deploy.deploy(PEER_ADDRESS, registrationRequests[1]);
+      deploy.deploy(PEER_ADDRESS, config.users[1]);
    })
 });
