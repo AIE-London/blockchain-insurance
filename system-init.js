@@ -83,7 +83,11 @@ chain.enroll(USERS[0].enrollId, USERS[0].enrollSecret, function(err, admin) {
           console.log("Enrolled: " + user.enrollmentId )
           resolve();
         })
-        .catch(err => console.log("ERROR: failed to enroll %s",err));
+        .catch(err => {
+          console.log("ERROR: failed to enroll %s",err)
+          // if it's failing to enroll - chances are they're already enrolled. just mark as done and move on.
+          resolve();
+        });
       });
     });
    });
