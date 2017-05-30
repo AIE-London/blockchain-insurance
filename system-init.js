@@ -40,8 +40,10 @@ var cert = fs.readFileSync(certFile);
 // Set the URL for member services
 console.log(MEMBERSRVC_ADDRESS);
 chain.setECDSAModeForGRPC(true);
-chain.addPeer("grpc://" + PEER_ADDRESS);
-chain.setMemberServicesUrl("grpc://" + MEMBERSRVC_ADDRESS, {
+chain.addPeer("grpcs://" + PEER_ADDRESS, {
+  pem: cert
+});
+chain.setMemberServicesUrl("grpcs://" + MEMBERSRVC_ADDRESS, {
   pem: cert
 });
 
@@ -60,22 +62,15 @@ chain.enroll(USERS[1].enrollId, USERS[1].enrollSecret, function(err, admin) {
    chain.setRegistrar(admin);
    // Now begin listening for web app requests
    var registrationRequests = config.users;
-   //registrationRequests.map(user => {
-    //return new Promise((resolve, reject) => {
+   registrationRequests.map(user => {
+    return new Promise((resolve, reject) => {
+      console.log("[Registration] Submitting request for user: " + user.enrollmentId);
       chain.register({
-        enrollmentID: "claimant1",
-        "affiliation": "group1",
-        "attributes": [
-          {
-            "name": "username",
-            "value": "claimant1"
-          },
-          {
-            "name": "role",
-            "value": "policyholder"
-          }
-        ]
+        "enrollmentID": user.enrollmentId,
+        "affiliation": user.affiliation,
+        "attributes": user.attributes
       }, function(err, createdUser) {
+        console.log("[Registration] SUCCESSFULLY registered user: " + user.enrollmentId);
         if (err) {
           console.log("ERROR: failed to register %s", err);
           throw err;
@@ -87,13 +82,13 @@ chain.enroll(USERS[1].enrollId, USERS[1].enrollSecret, function(err, admin) {
         })
         .then(() => {
           console.log("Enrolled: " + user.enrollmentId )
-          //resolve();
+          resolve();
         })
         .catch(err => console.log("ERROR: failed to enroll %s",err));
       });
-    //});
-   //});
+    });
+   });
    Promise.all(registrationRequests).then(() => {
-      //deploy.deploy(PEER_ADDRESS, USERS[1]);
+      deploy.deploy(PEER_ADDRESS, registrationRequests[1]);
    })
 });

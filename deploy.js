@@ -19,31 +19,33 @@ const deployMainChaincode = options => {
 }
 
 let deploy = (endpoint, user) => {
-  blockchain.enroll(endpoint, user).then(() => {
     if (process.env.CRUD_HASH) {
+      console.log("[DEPLOY] CRUD Chaincode already deployed.");
       deployMainChaincode({
         crudHash: process.env.CRUD_HASH,
-        user: user.enrollId,
+        user: user.enrollmentId,
         endpoint
       });
     } else {
       console.log("[DEPLOY] Deploying CRUD chaincode");
       blockchain.deploy(endpoint,
         "https://github.com/Capgemini-AIE/blockchain-insurance/chaincode/src/insurance_crud",
-        user.enrollId,
+        user.enrollmentId,
         [])
         .then(hash => ({
           crudHash: hash,
-          user: user.enrollId,
+          user: user.enrollmentId,
           endpoint
         }))
+        .then(options => {
+          return options;
+        })
         .then(deployMainChaincode)
         .catch(error => {
           console.error("[DEPLOY] Deploy of CRUD chaincode failed with error:");
           console.error(error);
         });
     }
-  });
   
 }
 
