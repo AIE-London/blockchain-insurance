@@ -1,0 +1,200 @@
+---
+stages:
+- name: Download
+  inputs:
+  - url: https://github.com/Capgemini-AIE/blockchain-insurance.git
+    type: git
+    branch: feature/self-deploying
+    dir_name: null
+  triggers:
+  - type: commit
+  jobs:
+  - name: Build
+    type: builder
+    artifact_dir: ''
+- name: Credentials
+  inputs:
+  - type: job
+    stage: Download
+    job: Build
+    dir_name: null
+  triggers:
+  - type: stage
+  properties:
+  - name: APIKEY
+    type: secure
+  - name: GCM_KEY
+    type: secure
+  - name: CONFIG_JSON
+    value: |-
+      {
+        "users": [
+          {
+            "enrollmentId": "claimant1",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "claimant1"
+              },
+              {
+                "name": "role",
+                "value": "policyholder"
+              }
+            ],
+            "emailAddress": "poc.claimant1@gmail.com"
+          },
+          {
+            "enrollmentId": "claimant2",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "claimant2"
+              },
+              {
+                "name": "role",
+                "value": "policyholder"
+              }
+            ],
+            "emailAddress": "poc.claimant2@gmail.com"
+          },
+          {
+            "enrollmentId": "insurer1",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "insurer1"
+              },
+              {
+                "name": "role",
+                "value": "insurer"
+              }
+            ]
+          },
+          {
+            "enrollmentId": "insurer2",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "insurer2"
+              },
+              {
+                "name": "role",
+                "value": "insurer"
+              }
+            ]
+          },
+          {
+            "enrollmentId": "garage1",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "garage1"
+              },
+              {
+                "name": "role",
+                "value": "garage"
+              }
+            ]
+          },
+          {
+            "enrollmentId": "garage2",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "garage2"
+              },
+              {
+                "name": "role",
+                "value": "garage"
+              }
+            ]
+          },
+          {
+            "enrollmentId": "superuser",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "superuser"
+              },
+              {
+                "name": "role",
+                "value": "superuser"
+              }
+            ]
+          },
+          {
+            "enrollmentId": "oracle",
+            "affiliation": "group1",
+            "attributes": [
+              {
+                "name": "username",
+                "value": "oracle"
+              },
+              {
+                "name": "role",
+                "value": "oracle"
+              }
+            ]
+          }
+        ]
+      }
+    type: text_area
+  jobs:
+  - name: Build
+    type: builder
+    artifact_dir: ''
+    build_type: shell
+    script: |-
+      #!/bin/bash
+      # invoke tests here
+      echo ${CONFIG_JSON} > config.json
+      cd config/credentials
+      rm .edmund-api-key
+      echo ${APIKEY} > .edmund-api-key
+      echo '{ "gcm" : "'${GCM_KEY}'"}' > gcm.json
+- name: Deploy
+  inputs:
+  - type: job
+    stage: Credentials
+    job: Build
+    dir_name: null
+  triggers:
+  - type: stage
+  jobs:
+  - name: Deploy
+    type: deployer
+    script: |-
+      #!/bin/bash
+      cf push -v "${CF_APP}"
+- name: Wiremock Deploy
+  inputs:
+  - type: job
+    stage: Download
+    job: Build
+    dir_name: null
+  triggers:
+  - type: stage
+  jobs:
+  - name: Wiremock Mapping Deploy
+    type: builder
+    artifact_dir: ''
+    build_type: npm
+    script: |-
+      #!/bin/bash
+
+      export PATH=/opt/IBM/node-v4.2/bin:$PATH
+
+      npm install
+      npm run deploy-wiremock
+hooks:
+- enabled: true
+  label: null
+  ssl_enabled: false
+  url: https://devops-api.ng.bluemix.net/v1/messaging/webhook/publish
