@@ -2,6 +2,10 @@
 
 A proof of concept Blockchain project around Car Insurance.
 
+## Deploy this to Bluemix
+
+[![Deploy to Bluemix](https://bluemix.net/deploy/button.png)](https://bluemix.net/deploy?repository=https://github.com/Capgemini-AIE/blockchain-insurance)
+
 ## Development Environment
 
 We're building on the docker-compose from [https://github.com/IBM-Blockchain/fabric-images](https://github.com/IBM-Blockchain/fabric-images).
